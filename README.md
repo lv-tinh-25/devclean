@@ -131,6 +131,13 @@ npm test                       # unit tests (Vitest)
 npm run build                  # compile to dist/
 ```
 
+Releases are cut by pushing a version tag — CI publishes to npm and creates the GitHub Release:
+
+```bash
+npm version patch              # or minor / major: bumps package.json and tags vX.Y.Z
+git push --follow-tags
+```
+
 <a name="license"></a>
 
 ## 📄 License
