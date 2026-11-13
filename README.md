@@ -53,8 +53,8 @@ One keystroke-driven screen lists every project under a folder, shows what you c
 ## 📦 Install
 
 ```bash
-npx devclean            # run without installing
-npm i -g devclean       # or install globally
+npx @lv-tinh-25/devclean     # run without installing
+npm i -g @lv-tinh-25/devclean  # or install globally, then just run `devclean`
 ```
 
 Requires Node.js 22 or newer.

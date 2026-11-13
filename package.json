@@ -1,6 +1,6 @@
 {
-  "name": "devclean",
-  "version": "0.1.0",
+  "name": "@lv-tinh-25/devclean",
+  "version": "0.1.1",
   "description": "Find and clean dependency & build folders (node_modules, .venv, target…) across your projects from one terminal UI.",
   "type": "module",
   "bin": {
@@ -46,5 +46,8 @@
     "type": "git",
     "url": "git+https://github.com/lv-tinh-25/devclean.git"
   },
-  "author": "lv-tinh-25"
+  "author": "lv-tinh-25",
+  "publishConfig": {
+    "access": "public"
+  }
 }
