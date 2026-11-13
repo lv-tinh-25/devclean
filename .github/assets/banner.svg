@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="240" viewBox="0 0 960 240" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace">
+<rect width="960" height="240" rx="16" fill="#0f141a"/>
+<text x="236.4" y="50" font-size="19" text-anchor="start" xml:space="preserve" textLength="487.2" lengthAdjust="spacingAndGlyphs"><tspan fill="#5ccfe6" font-weight="700">     _                 _                  </tspan></text>
+<text x="236.4" y="75" font-size="19" text-anchor="start" xml:space="preserve" textLength="487.2" lengthAdjust="spacingAndGlyphs"><tspan fill="#5ccfe6" font-weight="700">  __| | _____   _____| | ___  __ _ _ __   </tspan></text>
+<text x="236.4" y="100" font-size="19" text-anchor="start" xml:space="preserve" textLength="487.2" lengthAdjust="spacingAndGlyphs"><tspan fill="#5ccfe6" font-weight="700"> / _` |/ _ \ \ / / __| |/ _ \/ _` | &#x27;_ \  </tspan></text>
+<text x="236.4" y="125" font-size="19" text-anchor="start" xml:space="preserve" textLength="487.2" lengthAdjust="spacingAndGlyphs"><tspan fill="#5ccfe6" font-weight="700">| (_| |  __/\ V / (__| |  __/ (_| | | | | </tspan></text>
+<text x="236.4" y="150" font-size="19" text-anchor="start" xml:space="preserve" textLength="487.2" lengthAdjust="spacingAndGlyphs"><tspan fill="#5ccfe6" font-weight="700"> \__,_|\___| \_/ \___|_|\___|\__,_|_| |_| </tspan></text>
+<text x="480.0" y="200" font-size="17" text-anchor="middle" xml:space="preserve"><tspan fill="#d7dde4">node_modules · .venv · target · Pods · vendor — </tspan><tspan fill="#ffcc66" font-weight="700">found, grouped, gone.</tspan></text>
+</svg>

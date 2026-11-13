@@ -1,0 +1,50 @@
+{
+  "name": "devclean",
+  "version": "0.1.0",
+  "description": "Find and clean dependency & build folders (node_modules, .venv, target…) across your projects from one terminal UI.",
+  "type": "module",
+  "bin": {
+    "devclean": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.tsx",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "ink": "^8.0.0",
+    "react": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "ink-testing-library": "^4.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  },
+  "keywords": [
+    "cli",
+    "tui",
+    "node_modules",
+    "cleanup",
+    "disk-space",
+    "venv",
+    "gradle",
+    "maven",
+    "cargo"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lv-tinh-25/devclean.git"
+  },
+  "author": "lv-tinh-25"
+}
