@@ -191,4 +191,17 @@ describe('App', () => {
     expect(lastFrame()).toMatch(/→\[x\] old-landing/);
     unmount();
   });
+
+  it('shows the final folder count even when the scan ends within the progress throttle', async () => {
+    const quick = async function* (_root: string, _signal?: AbortSignal, onProgress?: (d: number, t: number) => void) {
+      onProgress?.(1, 5);
+      onProgress?.(5, 5);
+      onProgress?.(1234, 1234);
+    };
+    const { lastFrame, unmount } = render(<App root="/r" initial={{ ...initialState }} scanner={quick} />);
+    await tick();
+    await tick();
+    expect(lastFrame()).toContain('1,234 folders');
+    unmount();
+  });
 });

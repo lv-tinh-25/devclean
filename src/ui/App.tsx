@@ -45,7 +45,9 @@ export function App({ root, initial, scanner = scan }: AppProps) {
     const ac = new AbortController();
     const started = performance.now();
     let lastProgress = 0;
+    let latest = { done: 0, total: 0 };
     const onProgress = (done: number, total: number) => {
+      latest = { done, total };
       const now = performance.now();
       if (now - lastProgress < 100) return;
       lastProgress = now;
@@ -53,7 +55,10 @@ export function App({ root, initial, scanner = scan }: AppProps) {
     };
     (async () => {
       for await (const project of scanner(root, ac.signal, onProgress)) send({ type: 'projectFound', project });
-      if (!ac.signal.aborted) send({ type: 'scanDone', ms: performance.now() - started });
+      if (ac.signal.aborted) return;
+      // The throttle may have dropped the last report; the final count must be exact.
+      send({ type: 'progress', ...latest });
+      send({ type: 'scanDone', ms: performance.now() - started });
     })();
     return () => ac.abort();
   }, []);
