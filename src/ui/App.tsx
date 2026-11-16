@@ -13,6 +13,7 @@ import { buildView } from '../view.js';
 import { initialState, reducer, targets, type Action, type State } from '../state.js';
 import { Header, headerHeight } from './Header.js';
 import { List } from './List.js';
+import { KEY_HELP } from './hints.js';
 
 export interface AppProps {
   root: string;
@@ -145,8 +146,24 @@ export function App({ root, initial, scanner = scan }: AppProps) {
     dispatch(action);
   };
 
+  const [showHelp, setShowHelp] = useState(false);
+  const helpRef = useRef(false);
+  const setHelp = (on: boolean) => {
+    helpRef.current = on;
+    setShowHelp(on);
+  };
+
   const handle = (input: string, key: Key) => {
     const s = ref.current;
+    if (helpRef.current && !s.confirmQuit) {
+      if (input === '?' || key.escape) setHelp(false);
+      else if (input === 'q') send({ type: 'askQuit' });
+      return;
+    }
+    if (input === '?' && !s.confirm && !s.confirmQuit) {
+      setHelp(true);
+      return;
+    }
     if (s.confirmQuit) {
       if (input === 'y') {
         installAbort.current?.abort();
@@ -239,12 +256,26 @@ export function App({ root, initial, scanner = scan }: AppProps) {
     // wherever the cursor was when the alternate screen opened.
     <Box flexDirection="column" height={height} width={width}>
       <Header state={state} width={width} shown={shown} root={root} />
+      {showHelp ? (
+        <Box flexDirection="column" height={height - headerHeight(width) - 2 - confirmLines - installLines} paddingLeft={2}>
+          <Text dimColor>{'─'.repeat(Math.max(0, width - 2))}</Text>
+          <Text bold>Keys</Text>
+          {KEY_HELP.map(([k, what]) => (
+            <Text key={k} wrap="truncate-end">
+              <Text color="cyan">{k.padEnd(12)}</Text>
+              {what}
+            </Text>
+          ))}
+          <Text dimColor>{'\n? or Esc to close'}</Text>
+        </Box>
+      ) : (
       <List
         state={state}
         root={root}
         width={width}
         height={height - headerHeight(width) - 2 - confirmLines - installLines - (one?.warning ? 1 : 0)}
       />
+      )}
       <Text dimColor wrap="truncate-end">
         {breakdown ? `  ${breakdown}${one?.log ? '  ·  L log' : ''}` : ' '}
       </Text>

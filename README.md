@@ -95,6 +95,7 @@ Projects appear as soon as they're found and their sizes fill in while the scan 
 | <kbd>o</kbd> | Open the project in your file manager |
 | <kbd>Esc</kbd> | Cancel the projects still waiting to reinstall · cancel a range · close a prompt |
 | <kbd>q</kbd> | Quit (asks to confirm) |
+| <kbd>?</kbd> | Show / hide all keys (the hint bar shortens itself on narrow terminals) |
 | <kbd>Ctrl</kbd>+<kbd>C</kbd> | Quit immediately |
 
 Checkboxes: `[x]` selected · `[~]` part of a group selected · `[·]` inside a range you're still drawing · `[-]` not selectable right now.

@@ -2,6 +2,7 @@ import { homedir } from 'node:os';
 import { Box, Text } from 'ink';
 import { formatBytes, truncateMiddle } from '../format.js';
 import { renderBar } from '../progress.js';
+import { fitHints, HINTS, renderHints } from './hints.js';
 import { labelOf } from '../rules.js';
 import { releasable, selectedSize, type State } from '../state.js';
 
@@ -15,7 +16,6 @@ const LOGO = [
 
 const LOGO_W = Math.max(...LOGO.map((l) => l.length));
 
-export const HINTS = 'SPACE toggle │ →← open/close │ v range │ a all │ ENTER delete │ i reinstall │ o open │ q quit';
 
 function typeCounts(s: State): string {
   const counts = new Map<string, number>();
@@ -29,6 +29,8 @@ const BAR_W = 24;
 
 export function Header({ state, width, shown, root }: { state: State; width: number; shown: number; root: string }) {
   const bar = renderBar(shown, BAR_W);
+  const badge = ` ${state.selected.size} selected${state.selected.size ? ` · ${formatBytes(selectedSize(state))}` : ''} `;
+  const mode = state.install ? 'installing' : state.scanning ? 'scanning' : state.rangeAnchor !== null ? 'range' : 'normal';
   const shortRoot = root.startsWith(homedir()) ? '~' + root.slice(homedir().length) : root;
   const status = state.scanning ? (
     <Text>
@@ -85,26 +87,12 @@ export function Header({ state, width, shown, root }: { state: State; width: num
       <Box>
         <Box flexShrink={0}>
           <Text backgroundColor="yellow" color="black">
-            {` ${state.selected.size} selected${state.selected.size ? ` · ${formatBytes(selectedSize(state))}` : ''} `}
+            {badge}
           </Text>
         </Box>
-        {state.install ? (
-          <Text dimColor wrap="truncate-end">
-            {' ↑↓ move │ →← open/close │ L log │ Esc cancel queued │ q quit │ actions enable when installing is done'}
-          </Text>
-        ) : state.scanning ? (
-          <Text dimColor wrap="truncate-end">
-            {' ↑↓ move │ →← open/close │ q quit │ actions enable when the scan is done'}
-          </Text>
-        ) : state.rangeAnchor !== null ? (
-          <Text color="magenta" wrap="truncate-end">
-            {' RANGE: move ↑↓, then press v again to select every row in between · Esc cancel'}
-          </Text>
-        ) : (
-          <Text dimColor wrap="truncate-end">
-            {' ' + HINTS}
-          </Text>
-        )}
+        <Text color={mode === 'range' ? 'magenta' : undefined} dimColor={mode !== 'range'} wrap="truncate-end">
+          {' ' + renderHints(fitHints(HINTS[mode], Math.max(0, width - badge.length - 1)))}
+        </Text>
       </Box>
     </Box>
   );

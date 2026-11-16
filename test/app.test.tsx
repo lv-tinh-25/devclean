@@ -40,7 +40,7 @@ describe('App', () => {
   it('renders header and rows, then asks to confirm delete', async () => {
     const { lastFrame, stdin, unmount } = render(<App root="/r" initial={state} />);
     const f = lastFrame()!;
-    for (const s of ['PROJECT', 'TYPE', 'SIZE', 'MODIFIED', 'alpha-app', 'old-landing', 'Releasable:', 'SPACE toggle', 'Scan:       done', '2h ago', '5mo ago', '812 MB'])
+    for (const s of ['PROJECT', 'TYPE', 'SIZE', 'MODIFIED', 'alpha-app', 'old-landing', 'Releasable:', '␣ select', 'Scan:       done', '2h ago', '5mo ago', '812 MB'])
       expect(f).toContain(s);
     await tick();
     stdin.write(' ');
@@ -140,7 +140,7 @@ describe('App', () => {
     expect(lastFrame()).toContain('0 selected');
     expect(lastFrame()).not.toContain('Permanently delete');
     expect(lastFrame()).not.toContain('RANGE');
-    expect(lastFrame()).toContain('↑↓ move │ →← open/close │ q quit │ actions enable when the scan is done');
+    expect(lastFrame()).toContain('↑↓ move · ←→ group · ? help · q quit · actions enable when the scan is done');
     expect(lastFrame()).toMatch(/→\[-\] alpha-app/);
     stdin.write('j');
     await tick();
@@ -372,6 +372,26 @@ describe('App', () => {
     const st: State = { ...state, rows: [mk('/r/mono', 3), mk('/r/mono/packages/ui', 2)] };
     const { lastFrame, unmount } = render(<App root="/r" initial={st} />);
     expect(lastFrame()).toMatch(/▶ mono \(2\) .*deleted/);
+    unmount();
+  });
+
+  it('opens and closes the key help with ?', async () => {
+    const { lastFrame, stdin, unmount } = render(<App root="/r" initial={state} />);
+    await tick();
+    expect(lastFrame()).toContain('? help');
+    stdin.write('?');
+    await tick();
+    expect(lastFrame()).toContain('Keys');
+    expect(lastFrame()).toContain('Cancel the projects still waiting to reinstall');
+    expect(lastFrame()).not.toContain('alpha-app');
+    stdin.write('?');
+    await tick();
+    expect(lastFrame()).toContain('alpha-app');
+    stdin.write('?');
+    await tick();
+    stdin.write('\u001B');
+    await tick();
+    expect(lastFrame()).toContain('alpha-app');
     unmount();
   });
 });
