@@ -14,7 +14,7 @@ Scans [path] (default: current directory) for projects and lists their
 deletable folders (node_modules, .venv, target, build, Pods, vendor…).
 
 Keys: ↑↓/jk move · SPACE toggle · v range · a all · ENTER delete
-      i reinstall · o open in Finder · q quit
+      i reinstall · o open folder · q quit
 
 Deletion is permanent (not moved to Trash).`;
 
