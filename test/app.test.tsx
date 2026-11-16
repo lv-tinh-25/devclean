@@ -339,4 +339,39 @@ describe('App', () => {
     process.env.PATH = oldPath;
     unmount();
   });
+
+  it('shows install progress on a closed group and names nested projects by path', async () => {
+    const dir = await tmp();
+    for (const n of ['mono', 'mono/packages/ui', 'mono/packages/api']) {
+      await file(join(dir, `${n}/package.json`), '{}');
+      await file(join(dir, `${n}/node_modules/x`), Buffer.alloc(5000, 1));
+    }
+    const bin = await tmp();
+    await file(join(bin, 'npm'), '#!/bin/sh\nsleep 0.6\n');
+    await chmod(join(bin, 'npm'), 0o755);
+    const oldPath = process.env.PATH;
+    process.env.PATH = `${bin}:${oldPath}`;
+    const mk = (n: string, m: number) => ({ ...state.rows[0], path: join(dir, n), name: n.split('/').at(-1)!, modified: m, types: ['node' as const] });
+    const st: State = { ...state, rows: [mk('mono', 3), mk('mono/packages/ui', 2), mk('mono/packages/api', 1)] };
+    const { lastFrame, stdin, unmount } = render(<App root={dir} initial={st} />);
+    await tick();
+    stdin.write(' ');
+    await tick();
+    stdin.write('i');
+    await until(() => lastFrame()!.includes('Installing'));
+    expect(lastFrame()).toMatch(/▶ mono \(3\) .*installing/);
+    await until(() => lastFrame()!.includes('Installing mono/packages/'));
+    expect(lastFrame()).toMatch(/Installing mono\/packages\/(ui|api) \((2|3)\/3\)/);
+    stdin.write('\u001B');
+    process.env.PATH = oldPath;
+    unmount();
+  });
+
+  it('shows deleted on a group whose projects were all deleted', () => {
+    const mk = (p: string, m: number) => ({ ...state.rows[0], path: p, name: p.split('/').at(-1)!, modified: m, status: 'deleted' as const, size: 0 });
+    const st: State = { ...state, rows: [mk('/r/mono', 3), mk('/r/mono/packages/ui', 2)] };
+    const { lastFrame, unmount } = render(<App root="/r" initial={st} />);
+    expect(lastFrame()).toMatch(/▶ mono \(2\) .*deleted/);
+    unmount();
+  });
 });

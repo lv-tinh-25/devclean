@@ -257,7 +257,9 @@ export function App({ root, initial, scanner = scan }: AppProps) {
         <Box flexDirection="column">
           <Box justifyContent="space-between">
             <Text color="cyan" wrap="truncate-end">
-              {installing ? `  Installing ${installing.name} (${install.done + 1}/${install.total})…` : '  Installing…'}
+              {installing
+                ? `  Installing ${relative(root, installing.path) || installing.name} (${install.done + 1}/${install.total})…`
+                : '  Installing…'}
             </Text>
             <Box flexShrink={0}>
               <Text color="cyan">{marquee(frame, 12, 4)}</Text>

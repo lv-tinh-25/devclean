@@ -19,6 +19,13 @@ function sizeCell(item: Item, state: State) {
   if (r?.status === 'deleted') return 'deleted';
   if (r?.status === 'installing') return 'installing';
   if (r?.status === 'queued' && state.install) return `queued ${state.install.order.indexOf(r.path) + 1}/${state.install.total}`;
+  if (item.kind === 'group') {
+    // A closed group hides its rows, so surface what's happening inside it.
+    const statuses = state.rows.filter((x) => item.members.includes(x.path)).map((x) => x.status);
+    if (statuses.includes('installing')) return 'installing';
+    if (statuses.includes('queued')) return 'queued';
+    if (statuses.every((x) => x === 'deleted')) return 'deleted';
+  }
   if (item.measuring) return 'measuring…';
   return formatBytes(item.size);
 }
