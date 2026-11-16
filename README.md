@@ -12,7 +12,7 @@
 One keystroke-driven screen lists every project under a folder, shows what you can safely throw away and when you last touched it — then deletes it, or reinstalls it when you need it again.
 
 <p align="center">
-  <img src="./.github/assets/screenshot.svg" width="900" alt="devclean listing projects grouped by monorepo, with sizes and last-modified times" />
+  <img src="./.github/assets/demo.gif" width="900" alt="devclean scanning a folder, grouping a monorepo, deleting two projects and reinstalling them in the background" />
 </p>
 
 ## Table of Contents
@@ -42,8 +42,11 @@ One keystroke-driven screen lists every project under a folder, shows what you c
 - **Delete with eyes open**  
   Every folder that will be removed is listed with its size before you confirm. Source, tests and `.env` files are never touched.
 
-- **Reinstall in one key**  
-  Need a project again? <kbd>i</kbd> runs the right installer — `pnpm`, `yarn`, `bun`, `npm`, `uv`, `poetry`, `mvn`, `gradle`, `cargo`, `pod`, `composer`.
+- **Reinstall in one key, without leaving the list**  
+  Need a project again? <kbd>i</kbd> runs the right installer — `pnpm`, `yarn`, `bun`, `npm`, `uv`, `poetry`, `mvn`, `gradle`, `cargo`, `pod`, `composer` — in the background, with live output and a saved log. Pick several projects and they install one after another.
+
+- **Remembers what it deleted**  
+  Quit and come back later: projects devclean cleaned still show up as `deleted`, ready to reinstall.
 
 - **Honest numbers**  
   Hard-linked files don't count toward "Releasable", and `dist`/`build` are only offered when git ignores them.
@@ -57,7 +60,7 @@ npx @lv-tinh-25/devclean     # run without installing
 npm i -g @lv-tinh-25/devclean  # or install globally, then just run `devclean`
 ```
 
-Requires Node.js 22 or newer.
+Requires Node.js 22 or newer. Works on **macOS** and **Linux**; **Windows** support is coming soon.
 
 <a name="usage"></a>
 
@@ -69,7 +72,7 @@ devclean ~/Documents    # scan a specific directory
 devclean --help
 ```
 
-Projects appear as soon as they're found and their sizes fill in while the scan runs. Until it finishes you can browse and quit; selecting and deleting unlock when the scan is done.
+Projects appear as soon as they're found and their sizes fill in while the scan runs. Until it finishes you can browse and quit; selecting and deleting unlock when the scan is done. The same goes while projects are reinstalling, where you can also open the log with <kbd>L</kbd> and cancel the projects still waiting with <kbd>Esc</kbd>.
 
 > [!WARNING]
 > **Deletion is permanent.** Folders are removed like `rm -rf`, not moved to the Trash.
@@ -90,6 +93,7 @@ Projects appear as soon as they're found and their sizes fill in while the scan 
 | <kbd>i</kbd> | Reinstall dependencies for selected (or current) projects, in the background |
 | <kbd>L</kbd> | Open the last install log of the current project |
 | <kbd>o</kbd> | Open the project in your file manager |
+| <kbd>Esc</kbd> | Cancel the projects still waiting to reinstall · cancel a range · close a prompt |
 | <kbd>q</kbd> | Quit (asks to confirm) |
 | <kbd>Ctrl</kbd>+<kbd>C</kbd> | Quit immediately |
 
