@@ -6,7 +6,7 @@ import { fitHints, HINTS, renderHints } from './hints.js';
 import { labelOf } from '../rules.js';
 import { releasable, selectedSize, type State } from '../state.js';
 
-const LOGO = [
+export const LOGO_BIG = [
   '     _                 _                  ',
   '  __| | _____   _____| | ___  __ _ _ __  ',
   ' / _` |/ _ \\ \\ / / __| |/ _ \\/ _` | \'_ \\ ',
@@ -14,7 +14,24 @@ const LOGO = [
   ' \\__,_|\\___| \\_/ \\___|_|\\___|\\__,_|_| |_|',
 ];
 
-const LOGO_W = Math.max(...LOGO.map((l) => l.length));
+export const LOGO_SMALL = [
+  '┏┳┓┏━╸╻ ╻┏━╸╻  ┏━╸┏━┓┏┓╻',
+  ' ┃┃┣╸ ┃┏┛┃  ┃  ┣╸ ┣━┫┃┗┫',
+  '╺┻┛┗━╸┗┛ ┗━╸┗━╸┗━╸╹ ╹╹ ╹',
+];
+
+const widthOf = (logo: string[]) => Math.max(...logo.map((l) => l.length));
+const GAP = 4;
+// Room the stats column needs (a finished "Scan: done · 12.34s · 123,456 folders" line).
+// Fixed, so the logo doesn't change size when the scan line grows or shrinks.
+const STATS_W = 46;
+
+// ASCII art can't scale, so pick the biggest logo that fits beside the stats without
+// squeezing either; below that, show the stats alone.
+function pickLogo(width: number): string[] {
+  for (const logo of [LOGO_BIG, LOGO_SMALL]) if (width >= widthOf(logo) + GAP + STATS_W) return logo;
+  return [];
+}
 
 
 function typeCounts(s: State): string {
@@ -32,8 +49,10 @@ export function Header({ state, width, shown, root }: { state: State; width: num
   const badge = ` ${state.selected.size} selected${state.selected.size ? ` · ${formatBytes(selectedSize(state))}` : ''} `;
   const mode = state.install ? 'installing' : state.scanning ? 'scanning' : state.rangeAnchor !== null ? 'range' : 'normal';
   const shortRoot = root.startsWith(homedir()) ? '~' + root.slice(homedir().length) : root;
+  const logo = pickLogo(width);
+  const statsWidth = Math.max(10, logo.length ? width - widthOf(logo) - GAP : width);
   const status = state.scanning ? (
-    <Text>
+    <Text wrap="truncate-end">
       {'Scan:       '}
       <Text color="cyan">{bar.filled}</Text>
       <Text dimColor>{bar.track}</Text>
@@ -41,38 +60,40 @@ export function Header({ state, width, shown, root }: { state: State; width: num
       <Text dimColor>{` · ${state.progress.done.toLocaleString('en-US')} folders`}</Text>
     </Text>
   ) : (
-    <Text>
+    <Text wrap="truncate-end">
       {'Scan:       '}
       <Text color="green">{'done'}</Text>
       <Text dimColor>{` · ${(state.scanMs / 1000).toFixed(2)}s · ${state.progress.done.toLocaleString('en-US')} folders`}</Text>
     </Text>
   );
   const stats = (
-    <Box flexDirection="column">
-      <Text>
+    <Box flexDirection="column" width={statsWidth}>
+      <Text wrap="truncate-end">
         {'Folder:     '}
-        <Text bold>{truncateMiddle(shortRoot, Math.max(10, width - (width >= 80 ? LOGO_W + 4 : 0) - 12))}</Text>
+        <Text bold>{truncateMiddle(shortRoot, Math.max(10, statsWidth - 12))}</Text>
       </Text>
-      <Text>
+      <Text wrap="truncate-end">
         {'Releasable: '}
         <Text bold color="yellow">
           {formatBytes(releasable(state))}
         </Text>
       </Text>
-      <Text>
+      <Text wrap="truncate-end">
         {'Saved:      '}
         <Text color="green">{formatBytes(state.saved) + (state.saved > 0 ? ' ▲' : '')}</Text>
       </Text>
       {status}
-      <Text dimColor>{typeCounts(state) || ' '}</Text>
+      <Text dimColor wrap="truncate-end">
+        {typeCounts(state) || ' '}
+      </Text>
     </Box>
   );
   return (
     <Box flexDirection="column">
-      {width >= 80 ? (
-        <Box gap={4}>
-          <Box flexDirection="column">
-            {LOGO.map((l, i) => (
+      {logo.length ? (
+        <Box gap={GAP}>
+          <Box flexDirection="column" flexShrink={0} justifyContent="center" height={5}>
+            {logo.map((l, i) => (
               <Text key={i} color="cyan">
                 {l}
               </Text>
