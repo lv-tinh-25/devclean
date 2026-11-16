@@ -14,22 +14,18 @@ export const LOGO_BIG = [
   ' \\__,_|\\___| \\_/ \\___|_|\\___|\\__,_|_| |_|',
 ];
 
-// For medium widths: ASCII art can't be scaled down without changing its look, so show
-// the name itself instead of a different-looking smaller drawing.
-export const WORDMARK = ['devclean', '────────', 'find & clean dependency', 'folders across projects'];
+// When the ASCII logo doesn't fit, a one-line title goes above the stats: ASCII art
+// can't be scaled down without looking like a different logo.
+export const TITLE = 'find & clean dependency folders across projects';
 
 const widthOf = (logo: string[]) => Math.max(...logo.map((l) => l.length));
 const GAP = 4;
 // Room the stats column needs (a finished "Scan: done · 12.34s · 123,456 folders" line).
-// Fixed, so the logo doesn't change size when the scan line grows or shrinks.
+// Fixed, so the layout doesn't flip when the scan line grows or shrinks.
 const STATS_W = 46;
 
-// ASCII art can't scale, so pick the biggest logo that fits beside the stats without
-// squeezing either; below that, show the stats alone.
-function pickLogo(width: number): string[] {
-  for (const logo of [LOGO_BIG, WORDMARK]) if (width >= widthOf(logo) + GAP + STATS_W) return logo;
-  return [];
-}
+// The logo goes beside the stats only when neither has to be squeezed.
+const fitsLogo = (width: number) => width >= widthOf(LOGO_BIG) + GAP + STATS_W;
 
 
 function typeCounts(s: State): string {
@@ -47,8 +43,8 @@ export function Header({ state, width, shown, root }: { state: State; width: num
   const badge = ` ${state.selected.size} selected${state.selected.size ? ` · ${formatBytes(selectedSize(state))}` : ''} `;
   const mode = state.install ? 'installing' : state.scanning ? 'scanning' : state.rangeAnchor !== null ? 'range' : 'normal';
   const shortRoot = root.startsWith(homedir()) ? '~' + root.slice(homedir().length) : root;
-  const logo = pickLogo(width);
-  const statsWidth = Math.max(10, logo.length ? width - widthOf(logo) - GAP : width);
+  const big = fitsLogo(width);
+  const statsWidth = Math.max(10, big ? width - widthOf(LOGO_BIG) - GAP : width);
   const status = state.scanning ? (
     <Text wrap="truncate-end">
       {'Scan:       '}
@@ -88,30 +84,27 @@ export function Header({ state, width, shown, root }: { state: State; width: num
   );
   return (
     <Box flexDirection="column">
-      {logo.length ? (
+      {big ? (
         <Box gap={GAP}>
-          <Box flexDirection="column" flexShrink={0} justifyContent="center" height={5}>
-            {logo === WORDMARK ? (
-              <>
-                <Text bold color="cyan">
-                  {WORDMARK[0]}
-                </Text>
-                <Text color="cyan">{WORDMARK[1]}</Text>
-                <Text dimColor>{WORDMARK[2]}</Text>
-                <Text dimColor>{WORDMARK[3]}</Text>
-              </>
-            ) : (
-              logo.map((l, i) => (
-                <Text key={i} color="cyan">
-                  {l}
-                </Text>
-              ))
-            )}
+          <Box flexDirection="column" flexShrink={0}>
+            {LOGO_BIG.map((l, i) => (
+              <Text key={i} color="cyan">
+                {l}
+              </Text>
+            ))}
           </Box>
           {stats}
         </Box>
       ) : (
-        stats
+        <Box flexDirection="column">
+          <Text wrap="truncate-end">
+            <Text bold color="cyan">
+              devclean
+            </Text>
+            <Text dimColor>{` · ${TITLE}`}</Text>
+          </Text>
+          {stats}
+        </Box>
       )}
       <Text> </Text>
       <Box>
@@ -128,4 +121,4 @@ export function Header({ state, width, shown, root }: { state: State; width: num
   );
 }
 
-export const headerHeight = (_width: number) => 7;
+export const headerHeight = (width: number) => (fitsLogo(width) ? 7 : 8);
