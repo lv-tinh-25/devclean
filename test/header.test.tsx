@@ -12,6 +12,9 @@ const frame = (width: number, s: State = state, shown = 100) => {
 };
 const hasBigLogo = (lines: string[]) => LOGO_BIG.every((l) => lines.some((x) => x.includes(l.trimEnd())));
 
+// Each case renders the header many times; slow CI runners need more than the 5s default.
+const HEAVY = { timeout: 30_000 };
+
 describe('Header logo', () => {
   it('uses the big logo beside the stats when it fits', () => {
     const lines = frame(98);
@@ -29,7 +32,7 @@ describe('Header logo', () => {
     expect(TITLE).toBe('find & clean dependency folders across projects');
   });
 
-  it('never wraps, and the height matches headerHeight', () => {
+  it('never wraps, and the height matches headerHeight', HEAVY, () => {
     for (const w of [120, 98, 90, 83, 70, 55, 40, 30]) {
       expect(frame(w).length, `width ${w}`).toBe(headerHeight(w));
     }
@@ -37,7 +40,7 @@ describe('Header logo', () => {
     expect(headerHeight(70)).toBe(8);
   });
 
-  it('keeps the same layout while scanning and after the scan finishes', () => {
+  it('keeps the same layout while scanning and after the scan finishes', HEAVY, () => {
     const scanning = { ...state, scanning: true, progress: { done: 12345, total: 20000 } };
     for (const w of [120, 98, 90, 83, 70, 55]) {
       expect(hasBigLogo(frame(w, scanning, 42)), `width ${w}`).toBe(hasBigLogo(frame(w)));

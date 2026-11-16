@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { chmod, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { forget, historyFile, loadHistory, recordDeletion, restoreDeleted, type HistoryEntry } from '../src/history.js';
+import { flushHistory, forget, historyFile, loadHistory, recordDeletion, restoreDeleted, type HistoryEntry } from '../src/history.js';
 import { file, tmp } from './helpers.js';
 
 const entry = (path: string, over: Partial<HistoryEntry> = {}): HistoryEntry => ({
@@ -28,6 +28,14 @@ describe('history file', () => {
     ]);
     await forget(['/p/b'], f);
     expect((await loadHistory(f)).map((e) => e.path)).toEqual(['/p/a']);
+  });
+
+  it('flushHistory waits for writes that were started without awaiting', async () => {
+    const f = join(await tmp(), 'h.json');
+    void recordDeletion(entry('/p/a'), f);
+    void recordDeletion(entry('/p/b'), f);
+    await flushHistory();
+    expect((await loadHistory(f)).map((e) => e.path).sort()).toEqual(['/p/a', '/p/b']);
   });
 
   it('treats a missing or corrupt file as empty', async () => {

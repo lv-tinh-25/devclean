@@ -40,17 +40,33 @@ async function save(entries: HistoryEntry[], file: string): Promise<void> {
   }
 }
 
-export async function recordDeletion(entry: HistoryEntry, file = historyFile()): Promise<void> {
-  const rest = (await loadHistory(file)).filter((e) => e.path !== entry.path);
-  await save([...rest, entry], file);
+// Writes are read-modify-write, so run them one at a time: two deletions in a row must
+// not both read the old file and overwrite each other.
+let queue: Promise<void> = Promise.resolve();
+function enqueue(task: () => Promise<void>): Promise<void> {
+  const run = queue.then(task, task);
+  queue = run.catch(() => {});
+  return run;
 }
 
-export async function forget(paths: string[], file = historyFile()): Promise<void> {
-  if (!paths.length) return;
-  const drop = new Set(paths);
-  const entries = await loadHistory(file);
-  const kept = entries.filter((e) => !drop.has(e.path));
-  if (kept.length !== entries.length) await save(kept, file);
+// Resolves once every write started so far is on disk; call before exiting.
+export const flushHistory = (): Promise<void> => queue;
+
+export function recordDeletion(entry: HistoryEntry, file = historyFile()): Promise<void> {
+  return enqueue(async () => {
+    const rest = (await loadHistory(file)).filter((e) => e.path !== entry.path);
+    await save([...rest, entry], file);
+  });
+}
+
+export function forget(paths: string[], file = historyFile()): Promise<void> {
+  if (!paths.length) return Promise.resolve();
+  return enqueue(async () => {
+    const drop = new Set(paths);
+    const entries = await loadHistory(file);
+    const kept = entries.filter((e) => !drop.has(e.path));
+    if (kept.length !== entries.length) await save(kept, file);
+  });
 }
 
 const isUnder = (path: string, root: string) => path === root || path.startsWith(root.endsWith(sep) ? root : root + sep);
