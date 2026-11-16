@@ -92,7 +92,7 @@ describe('reducer', () => {
 
   it('tracks an inline install from queue to result', () => {
     let s = run([...found(proj('a', 3), proj('b', 2)), { type: 'installQueued', paths: ['/r/a', '/r/b'] }]);
-    expect(s.install).toEqual({ total: 2, done: 0, current: undefined, startedAt: 0, tail: [] });
+    expect(s.install).toEqual({ total: 2, done: 0, current: undefined, startedAt: 0, tail: [], order: ['/r/a', '/r/b'] });
     s = run([{ type: 'installStarted', path: '/r/a' }], s);
     expect(s.rows.find((r) => r.name === 'a')!.status).toBe('installing');
     expect(s.install!.startedAt).toBeGreaterThan(0);
@@ -107,6 +107,25 @@ describe('reducer', () => {
     expect([b.status, b.error, b.log]).toEqual(['error', 'npm not found', '/l/b.log']);
     s = run([{ type: 'installDone' }], s);
     expect(s.install).toBeNull();
+  });
+
+  it('marks waiting projects as queued and cancels them back to their old status', () => {
+    let s = run([...found(proj('a', 3), proj('b', 2), proj('c', 1)), { type: 'deleted', path: '/r/c', freed: 100 }]);
+    s = run([{ type: 'installQueued', paths: ['/r/a', '/r/b', '/r/c'] }, { type: 'installStarted', path: '/r/a' }], s);
+    expect(s.rows.map((r) => [r.name, r.status])).toEqual([
+      ['a', 'installing'],
+      ['b', 'queued'],
+      ['c', 'queued'],
+    ]);
+    expect(s.install!.order).toEqual(['/r/a', '/r/b', '/r/c']);
+    s = run([{ type: 'installCancelQueued' }], s);
+    expect(s.rows.map((r) => [r.name, r.status])).toEqual([
+      ['a', 'installing'],
+      ['b', 'idle'],
+      ['c', 'deleted'],
+    ]);
+    s = run([{ type: 'installQueued', paths: ['/r/b'] }, { type: 'installDone' }], s);
+    expect(s.rows.find((r) => r.name === 'b')!.status).toBe('idle');
   });
 
   it('records anchor projects without adding rows', () => {

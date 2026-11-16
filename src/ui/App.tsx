@@ -111,6 +111,8 @@ export function App({ root, initial, scanner = scan }: AppProps) {
     try {
       for (const row of rows) {
         if (ac.signal.aborted) break;
+        // Esc may have taken it out of the queue while an earlier one was installing.
+        if (ref.current.rows.find((r) => r.path === row.path)?.status !== 'queued') continue;
         send({ type: 'installStarted', path: row.path });
         const result = await reinstall(
           row,
@@ -169,7 +171,8 @@ export function App({ root, initial, scanner = scan }: AppProps) {
       const item = buildView(s)[s.cursor];
       const log = item?.row?.log;
       if (item?.kind === 'row' && log) void openLog(log);
-    } else if (s.scanning || busy.current) {
+    } else if (busy.current && key.escape) send({ type: 'installCancelQueued' });
+    else if (s.scanning || busy.current) {
       // Rows move around mid-scan and mid-install, so only browsing and quitting are allowed.
       if (input === 'q') send({ type: 'askQuit' });
     }

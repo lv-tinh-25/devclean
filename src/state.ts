@@ -4,7 +4,9 @@ import type { Project } from './scan.js';
 import { buildView } from './view.js';
 
 export interface Row extends Project {
-  status: 'idle' | 'deleting' | 'deleted' | 'error' | 'installing';
+  status: 'idle' | 'deleting' | 'deleted' | 'error' | 'installing' | 'queued';
+  // Status to go back to if a queued install is cancelled.
+  queuedFrom?: Row['status'];
   error?: string;
   deletedAt?: number;
   warning?: string;
@@ -17,6 +19,7 @@ export interface InstallProgress {
   current?: string;
   startedAt: number;
   tail: string[];
+  order: string[];
 }
 
 const TAIL_LINES = 4;
@@ -63,7 +66,8 @@ export type Action =
   | { type: 'installStarted'; path: string }
   | { type: 'installOutput'; line: string }
   | { type: 'installFinished'; path: string; result: InstallResult; project?: Project }
-  | { type: 'installDone' };
+  | { type: 'installDone' }
+  | { type: 'installCancelQueued' };
 
 export const initialState: State = {
   rows: [],
@@ -120,6 +124,11 @@ function upsert(s: State, project: Project, keepEmpty = false): State {
   const anchors = keep ? s.anchors : new Set(s.anchors).add(project.path);
   return keepCursor(s, { ...s, rows, anchors });
 }
+
+const unqueue = (s: State): State => ({
+  ...s,
+  rows: s.rows.map((r) => (r.status === 'queued' ? { ...r, status: r.queuedFrom ?? 'idle', queuedFrom: undefined } : r)),
+});
 
 const patch = (s: State, path: string, fn: (r: Row) => Row): State => ({
   ...s,
@@ -221,8 +230,13 @@ export function reducer(s: State, a: Action): State {
       if (!added.length) return s;
       return keepCursor(s, { ...s, rows: [...s.rows, ...added].sort(byModified) });
     }
-    case 'installQueued':
-      return { ...s, install: { total: a.paths.length, done: 0, current: undefined, startedAt: 0, tail: [] } };
+    case 'installQueued': {
+      const queued = new Set(a.paths);
+      const rows = s.rows.map((r) => (queued.has(r.path) ? { ...r, status: 'queued' as const, queuedFrom: r.status } : r));
+      return { ...s, rows, install: { total: a.paths.length, done: 0, current: undefined, startedAt: 0, tail: [], order: a.paths } };
+    }
+    case 'installCancelQueued':
+      return unqueue(s);
     case 'installStarted': {
       const next = patch(s, a.path, (r) => ({ ...r, status: 'installing', error: undefined, warning: undefined }));
       return { ...next, install: s.install && { ...s.install, current: a.path, startedAt: Date.now(), tail: [] } };
@@ -242,7 +256,7 @@ export function reducer(s: State, a: Action): State {
       return { ...next, install: s.install && { ...s.install, done: s.install.done + 1, current: undefined, tail: [] } };
     }
     case 'installDone':
-      return { ...s, install: null };
+      return { ...unqueue(s), install: null };
     case 'clearSelection':
       return { ...s, selected: new Set(), rangeAnchor: null, allSelected: false };
     case 'error':

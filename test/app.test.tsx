@@ -304,4 +304,36 @@ describe('App', () => {
     process.env.PATH = oldPath;
     unmount();
   });
+
+  it('shows queued projects and Esc cancels the ones still waiting', async () => {
+    const dir = await tmp();
+    for (const n of ['one', 'two', 'three']) {
+      await file(join(dir, `${n}/package.json`), '{}');
+      await file(join(dir, `${n}/node_modules/x`), Buffer.alloc(5000, 1));
+    }
+    const bin = await tmp();
+    await file(join(bin, 'npm'), '#!/bin/sh\nsleep 0.6\n');
+    await chmod(join(bin, 'npm'), 0o755);
+    const oldPath = process.env.PATH;
+    process.env.PATH = `${bin}:${oldPath}`;
+    const mk = (n: string, m: number) => ({ ...state.rows[0], path: join(dir, n), name: n, modified: m, types: ['node' as const] });
+    const st: State = { ...state, rows: [mk('one', 3), mk('two', 2), mk('three', 1)] };
+    const { lastFrame, stdin, unmount } = render(<App root={dir} initial={st} />);
+    await tick();
+    stdin.write('a');
+    await tick();
+    stdin.write('i');
+    await until(() => lastFrame()!.includes('queued 3/3'));
+    expect(lastFrame()).toMatch(/one .*installing/);
+    expect(lastFrame()).toMatch(/two .*queued 2\/3/);
+    expect(lastFrame()).toMatch(/three .*queued 3\/3/);
+    expect(lastFrame()).toContain('Esc cancel queued');
+    stdin.write('\u001B');
+    await until(() => !lastFrame()!.includes('Installing'));
+    const f = lastFrame()!;
+    expect(f).not.toContain('queued');
+    expect(f).not.toMatch(/two .*installing/);
+    process.env.PATH = oldPath;
+    unmount();
+  });
 });

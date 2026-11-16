@@ -90,7 +90,7 @@ export function Header({ state, width, shown, root }: { state: State; width: num
         </Box>
         {state.install ? (
           <Text dimColor wrap="truncate-end">
-            {' ↑↓ move │ →← open/close │ L log │ q quit │ actions enable when installing is done'}
+            {' ↑↓ move │ →← open/close │ L log │ Esc cancel queued │ q quit │ actions enable when installing is done'}
           </Text>
         ) : state.scanning ? (
           <Text dimColor wrap="truncate-end">

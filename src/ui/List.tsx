@@ -13,11 +13,12 @@ const PREFIX_W = 6;
 const pad = (s: string, w: number) => (s.length >= w ? s.slice(0, w) : s + ' '.repeat(w - s.length));
 const padStart = (s: string, w: number) => (s.length >= w ? s.slice(0, w) : ' '.repeat(w - s.length) + s);
 
-function sizeCell(item: Item) {
+function sizeCell(item: Item, state: State) {
   const r = item.kind === 'row' ? item.row : undefined;
   if (r?.status === 'deleting') return 'deleting…';
   if (r?.status === 'deleted') return 'deleted';
   if (r?.status === 'installing') return 'installing';
+  if (r?.status === 'queued' && state.install) return `queued ${state.install.order.indexOf(r.path) + 1}/${state.install.total}`;
   if (item.measuring) return 'measuring…';
   return formatBytes(item.size);
 }
@@ -98,12 +99,12 @@ export function List({ state, root, width, height }: { state: State; root: strin
         const rest = ` ${pad(
           item.types.map(labelOf).filter((l, j, a) => a.indexOf(l) === j).join('+'),
           TYPE_W,
-        )} ${padStart(sizeCell(item), SIZE_W)} ${padStart(item.modified ? relativeTime(item.modified) : '-', MOD_W)}`;
+        )} ${padStart(sizeCell(item, state), SIZE_W)} ${padStart(item.modified ? relativeTime(item.modified) : '-', MOD_W)}`;
         return (
           <Box key={item.key} flexDirection="column">
             <Text
               inverse={isCursor}
-              dimColor={r?.status === 'deleted' && !isCursor}
+              dimColor={(r?.status === 'deleted' || r?.status === 'queued') && !isCursor}
               color={
                 r?.status === 'error' ? 'red' : r?.status === 'deleting' || r?.status === 'installing' ? 'yellow' : undefined
               }
