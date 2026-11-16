@@ -253,7 +253,10 @@ export function reducer(s: State, a: Action): State {
         warning: a.result.status === 'warning' ? a.result.message : undefined,
         log: a.result.log,
       }));
-      return { ...next, install: s.install && { ...s.install, done: s.install.done + 1, current: undefined, tail: [] } };
+      // Like deleting: a project leaves the selection once it's done, so the count shows what's left.
+      const selected = new Set(next.selected);
+      selected.delete(a.path);
+      return { ...next, selected, install: s.install && { ...s.install, done: s.install.done + 1, current: undefined, tail: [] } };
     }
     case 'installDone':
       return { ...unqueue(s), install: null };

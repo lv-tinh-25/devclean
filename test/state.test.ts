@@ -109,6 +109,15 @@ describe('reducer', () => {
     expect(s.install).toBeNull();
   });
 
+  it('unticks a project only when its install finishes', () => {
+    let s = run([...found(proj('a', 3), proj('b', 2)), { type: 'all' }, { type: 'installQueued', paths: ['/r/a', '/r/b'] }]);
+    expect(s.selected.size).toBe(2);
+    s = run([{ type: 'installStarted', path: '/r/a' }, { type: 'installFinished', path: '/r/a', result: { status: 'ok' }, project: proj('a', 3) }], s);
+    expect([...s.selected]).toEqual(['/r/b']);
+    s = run([{ type: 'installCancelQueued' }, { type: 'installDone' }], s);
+    expect([...s.selected]).toEqual(['/r/b']);
+  });
+
   it('marks waiting projects as queued and cancels them back to their old status', () => {
     let s = run([...found(proj('a', 3), proj('b', 2), proj('c', 1)), { type: 'deleted', path: '/r/c', freed: 100 }]);
     s = run([{ type: 'installQueued', paths: ['/r/a', '/r/b', '/r/c'] }, { type: 'installStarted', path: '/r/a' }], s);

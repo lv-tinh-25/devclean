@@ -101,7 +101,6 @@ export function App({ root, initial, scanner = scan }: AppProps) {
     busy.current = true;
     const ac = new AbortController();
     installAbort.current = ac;
-    send({ type: 'clearSelection' });
     send({ type: 'installQueued', paths: rows.map((r) => r.path) });
     let pending: string[] = [];
     const flush = setInterval(() => {

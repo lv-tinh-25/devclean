@@ -325,13 +325,16 @@ describe('App', () => {
     stdin.write('i');
     await until(() => lastFrame()!.includes('queued 3/3'));
     expect(lastFrame()).toMatch(/one .*installing/);
-    expect(lastFrame()).toMatch(/two .*queued 2\/3/);
+    expect(lastFrame()).toMatch(/\[x\] two .*queued 2\/3/);
+    expect(lastFrame()).toContain('3 selected');
     expect(lastFrame()).toMatch(/three .*queued 3\/3/);
     expect(lastFrame()).toContain('Esc cancel queued');
     stdin.write('\u001B');
     await until(() => !lastFrame()!.includes('Installing'));
     const f = lastFrame()!;
     expect(f).not.toContain('queued');
+    expect(f).toMatch(/\[ \] one /);
+    expect(f).toMatch(/\[x\] three /);
     expect(f).not.toMatch(/two .*installing/);
     process.env.PATH = oldPath;
     unmount();
