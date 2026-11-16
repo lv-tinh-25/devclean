@@ -167,16 +167,15 @@ describe('App', () => {
     stdin.write('\u001B[C');
     await tick();
     expect(lastFrame()).toMatch(/▼ old-landing \(2\)/);
-    expect(lastFrame()).toMatch(/├─ apps\/web/);
+    expect(lastFrame()).toMatch(/├─ apps[\\/]web/);
     expect(lastFrame()).toMatch(/└─ \.\/ \(root\) node_modules/);
-    expect(lastFrame()).toContain('apps/web');
     expect(lastFrame()).toContain('./ (root) node_modules');
     stdin.write('v');
     await tick();
     stdin.write('j');
     await tick();
     expect(lastFrame()).toMatch(/\[-\] ▼ old-landing/);
-    expect(lastFrame()).toMatch(/\[·\]   ├─ apps\/web/);
+    expect(lastFrame()).toMatch(/\[·\]   ├─ apps[\\/]web/);
     stdin.write('\u001B');
     await tick();
     stdin.write('k');

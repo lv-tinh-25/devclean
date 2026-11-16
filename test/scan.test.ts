@@ -34,7 +34,7 @@ describe('scan', () => {
   it('finds projects with junk, skips non-projects and excluded dirs', async () => {
     const root = await fixture();
     const found = await collect(root);
-    expect(found.map((p) => relative(root, p.path)).sort()).toEqual(['a', 'b', 'mono', 'mono/packages/x']);
+    expect(found.map((p) => relative(root, p.path)).sort()).toEqual(['a', 'b', 'mono', join('mono', 'packages', 'x')]);
     const b = found.find((p) => p.name === 'b')!;
     expect(b.types).toEqual(['python']);
     expect(b.junk.map((j) => j.name).sort()).toEqual(['.venv', '__pycache__']);
