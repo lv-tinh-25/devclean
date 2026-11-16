@@ -3,6 +3,7 @@ import { stat } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { render } from 'ink';
+import { flushHistory } from './history.js';
 import { App } from './ui/App.js';
 
 const HELP = `devclean — find and clean dependency & build folders
@@ -34,5 +35,7 @@ if (!(await stat(root).catch(() => null))?.isDirectory()) {
 }
 
 await render(<App root={root} />, { alternateScreen: true }).waitUntilExit();
+// Deletions are recorded in the background; don't cut the last write short.
+await flushHistory();
 // In-flight size measurements don't stop on abort; don't make the user wait for them.
 process.exit(0);
