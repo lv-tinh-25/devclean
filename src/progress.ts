@@ -16,3 +16,17 @@ export function renderBar(pct: number, width: number): { filled: string; track: 
   const filled = '█'.repeat(full) + partial;
   return { filled, track: '─'.repeat(width - full - (partial ? 1 : 0)) };
 }
+
+// An indeterminate bar: installers don't report how much is left, so show activity, not a guess.
+export function marquee(frame: number, width: number, size: number): string {
+  const range = width - size;
+  const period = range * 2;
+  const step = period ? frame % period : 0;
+  const pos = step > range ? period - step : step;
+  return '─'.repeat(pos) + '━'.repeat(size) + '─'.repeat(range - pos);
+}
+
+export function formatElapsed(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}

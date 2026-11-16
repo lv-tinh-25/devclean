@@ -15,6 +15,7 @@ export interface InstallProgress {
   total: number;
   done: number;
   current?: string;
+  startedAt: number;
   tail: string[];
 }
 
@@ -221,10 +222,10 @@ export function reducer(s: State, a: Action): State {
       return keepCursor(s, { ...s, rows: [...s.rows, ...added].sort(byModified) });
     }
     case 'installQueued':
-      return { ...s, install: { total: a.paths.length, done: 0, current: undefined, tail: [] } };
+      return { ...s, install: { total: a.paths.length, done: 0, current: undefined, startedAt: 0, tail: [] } };
     case 'installStarted': {
       const next = patch(s, a.path, (r) => ({ ...r, status: 'installing', error: undefined, warning: undefined }));
-      return { ...next, install: s.install && { ...s.install, current: a.path, tail: [] } };
+      return { ...next, install: s.install && { ...s.install, current: a.path, startedAt: Date.now(), tail: [] } };
     }
     case 'installOutput':
       return s.install ? { ...s, install: { ...s.install, tail: [...s.install.tail, a.line].slice(-TAIL_LINES) } } : s;

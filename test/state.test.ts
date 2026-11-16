@@ -92,9 +92,10 @@ describe('reducer', () => {
 
   it('tracks an inline install from queue to result', () => {
     let s = run([...found(proj('a', 3), proj('b', 2)), { type: 'installQueued', paths: ['/r/a', '/r/b'] }]);
-    expect(s.install).toEqual({ total: 2, done: 0, current: undefined, tail: [] });
+    expect(s.install).toEqual({ total: 2, done: 0, current: undefined, startedAt: 0, tail: [] });
     s = run([{ type: 'installStarted', path: '/r/a' }], s);
     expect(s.rows.find((r) => r.name === 'a')!.status).toBe('installing');
+    expect(s.install!.startedAt).toBeGreaterThan(0);
     for (const line of ['one', 'two', 'three', 'four', 'five']) s = run([{ type: 'installOutput', line }], s);
     expect(s.install!.tail).toEqual(['two', 'three', 'four', 'five']);
     s = run([{ type: 'installFinished', path: '/r/a', result: { status: 'warning', message: 'approve builds', log: '/l/a.log' }, project: proj('a', 3, 700) }], s);

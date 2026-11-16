@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { nextShown, renderBar } from '../src/progress.js';
+import { formatElapsed, marquee, nextShown, renderBar } from '../src/progress.js';
 
 describe('nextShown', () => {
   it('starts from 0 and climbs gradually even when the raw ratio jumps', () => {
@@ -29,5 +29,26 @@ describe('renderBar', () => {
     const half = renderBar(55, 10);
     expect(half.filled).toBe('█████▌');
     expect(half.filled.length + half.track.length).toBe(10);
+  });
+});
+
+describe('marquee', () => {
+  it('moves a fixed-size block back and forth inside the track', () => {
+    const frames = Array.from({ length: 20 }, (_, i) => marquee(i, 10, 3));
+    expect(frames[0]).toBe('━━━───────');
+    expect(frames[1]).toBe('─━━━──────');
+    expect(frames[7]).toBe('───────━━━');
+    expect(frames[8]).toBe('──────━━━─');
+    expect(frames[14]).toBe('━━━───────');
+    expect(frames.every((f) => f.length === 10)).toBe(true);
+  });
+});
+
+describe('formatElapsed', () => {
+  it('shows minutes and seconds', () => {
+    expect(formatElapsed(0)).toBe('0:00');
+    expect(formatElapsed(9_400)).toBe('0:09');
+    expect(formatElapsed(75_000)).toBe('1:15');
+    expect(formatElapsed(3_725_000)).toBe('62:05');
   });
 });

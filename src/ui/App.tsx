@@ -1,6 +1,6 @@
 import { Box, Text, useApp, useInput, useStdout, type Key } from 'ink';
 import { useEffect, useReducer, useRef, useState } from 'react';
-import { nextShown } from '../progress.js';
+import { formatElapsed, marquee, nextShown } from '../progress.js';
 import { deleteJunk, reinstall } from '../actions.js';
 import { forget, recordDeletion, restoreDeleted } from '../history.js';
 import { formatBytes, relativeTime } from '../format.js';
@@ -81,6 +81,13 @@ export function App({ root, initial, scanner = scan }: AppProps) {
       }
     }
   };
+
+  const [frame, setFrame] = useState(0);
+  useEffect(() => {
+    if (!state.install) return;
+    const timer = setInterval(() => setFrame((f) => f + 1), 120);
+    return () => clearInterval(timer);
+  }, [!!state.install]);
 
   const installAbort = useRef<AbortController | null>(null);
   useEffect(() => () => installAbort.current?.abort(), []);
@@ -246,9 +253,15 @@ export function App({ root, initial, scanner = scan }: AppProps) {
       )}
       {install && (
         <Box flexDirection="column">
-          <Text color="cyan">
-            {installing ? `  Installing ${installing.name} (${install.done + 1}/${install.total})…` : '  Installing…'}
-          </Text>
+          <Box justifyContent="space-between">
+            <Text color="cyan" wrap="truncate-end">
+              {installing ? `  Installing ${installing.name} (${install.done + 1}/${install.total})…` : '  Installing…'}
+            </Text>
+            <Box flexShrink={0}>
+              <Text color="cyan">{marquee(frame, 12, 4)}</Text>
+              <Text dimColor>{`  ${formatElapsed(install.startedAt ? Date.now() - install.startedAt : 0)}`}</Text>
+            </Box>
+          </Box>
           {install.tail.map((line, i) => (
             <Text key={i} dimColor wrap="truncate-end">
               {`    ${line}`}

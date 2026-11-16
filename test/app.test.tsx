@@ -261,6 +261,7 @@ describe('App', () => {
     await until(() => lastFrame()!.includes('Progress: resolved 597'));
     expect(lastFrame()).toMatch(/app .*installing/);
     expect(lastFrame()).toContain('Installing app (1/1)');
+    expect(lastFrame()).toMatch(/Installing app \(1\/1\)….*[━─]{12} +0:0\d/);
     expect(lastFrame()).toContain('Progress: resolved 597');
     await until(() => lastFrame()!.includes('⚠'));
     const f = lastFrame()!;
