@@ -17,6 +17,7 @@ function sizeCell(item: Item) {
   const r = item.kind === 'row' ? item.row : undefined;
   if (r?.status === 'deleting') return 'deleting…';
   if (r?.status === 'deleted') return 'deleted';
+  if (r?.status === 'installing') return 'installing';
   if (item.measuring) return 'measuring…';
   return formatBytes(item.size);
 }
@@ -103,7 +104,9 @@ export function List({ state, root, width, height }: { state: State; root: strin
             <Text
               inverse={isCursor}
               dimColor={r?.status === 'deleted' && !isCursor}
-              color={r?.status === 'error' ? 'red' : r?.status === 'deleting' ? 'yellow' : undefined}
+              color={
+                r?.status === 'error' ? 'red' : r?.status === 'deleting' || r?.status === 'installing' ? 'yellow' : undefined
+              }
             >
               {isCursor ? ' →' : '  '}
               <Text

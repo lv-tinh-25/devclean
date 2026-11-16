@@ -90,6 +90,24 @@ describe('reducer', () => {
     expect(s.rows[0].deletedAt).toBeGreaterThan(0);
   });
 
+  it('tracks an inline install from queue to result', () => {
+    let s = run([...found(proj('a', 3), proj('b', 2)), { type: 'installQueued', paths: ['/r/a', '/r/b'] }]);
+    expect(s.install).toEqual({ total: 2, done: 0, current: undefined, tail: [] });
+    s = run([{ type: 'installStarted', path: '/r/a' }], s);
+    expect(s.rows.find((r) => r.name === 'a')!.status).toBe('installing');
+    for (const line of ['one', 'two', 'three', 'four', 'five']) s = run([{ type: 'installOutput', line }], s);
+    expect(s.install!.tail).toEqual(['two', 'three', 'four', 'five']);
+    s = run([{ type: 'installFinished', path: '/r/a', result: { status: 'warning', message: 'approve builds', log: '/l/a.log' }, project: proj('a', 3, 700) }], s);
+    const a = s.rows.find((r) => r.name === 'a')!;
+    expect([a.status, a.size, a.warning, a.log]).toEqual(['idle', 700, 'approve builds', '/l/a.log']);
+    expect(s.install).toMatchObject({ done: 1, tail: [] });
+    s = run([{ type: 'installStarted', path: '/r/b' }, { type: 'installFinished', path: '/r/b', result: { status: 'failed', message: 'npm not found', log: '/l/b.log' } }], s);
+    const b = s.rows.find((r) => r.name === 'b')!;
+    expect([b.status, b.error, b.log]).toEqual(['error', 'npm not found', '/l/b.log']);
+    s = run([{ type: 'installDone' }], s);
+    expect(s.install).toBeNull();
+  });
+
   it('records anchor projects without adding rows', () => {
     const s = run(found({ ...proj('shop', 1, 0), junk: [], anchor: true }));
     expect(s.rows).toHaveLength(0);

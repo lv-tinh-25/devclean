@@ -1,6 +1,6 @@
 import { homedir } from 'node:os';
 import { Box, Text } from 'ink';
-import { formatBytes } from '../format.js';
+import { formatBytes, truncateMiddle } from '../format.js';
 import { renderBar } from '../progress.js';
 import { labelOf } from '../rules.js';
 import { releasable, selectedSize, type State } from '../state.js';
@@ -12,6 +12,8 @@ const LOGO = [
   '| (_| |  __/\\ V / (__| |  __/ (_| | | | |',
   ' \\__,_|\\___| \\_/ \\___|_|\\___|\\__,_|_| |_|',
 ];
+
+const LOGO_W = Math.max(...LOGO.map((l) => l.length));
 
 export const HINTS = 'SPACE toggle │ →← open/close │ v range │ a all │ ENTER delete │ i reinstall │ o open │ q quit';
 
@@ -27,6 +29,7 @@ const BAR_W = 24;
 
 export function Header({ state, width, shown, root }: { state: State; width: number; shown: number; root: string }) {
   const bar = renderBar(shown, BAR_W);
+  const shortRoot = root.startsWith(homedir()) ? '~' + root.slice(homedir().length) : root;
   const status = state.scanning ? (
     <Text>
       {'Scan:       '}
@@ -46,7 +49,7 @@ export function Header({ state, width, shown, root }: { state: State; width: num
     <Box flexDirection="column">
       <Text>
         {'Folder:     '}
-        <Text bold>{root.startsWith(homedir()) ? '~' + root.slice(homedir().length) : root}</Text>
+        <Text bold>{truncateMiddle(shortRoot, Math.max(10, width - (width >= 80 ? LOGO_W + 4 : 0) - 12))}</Text>
       </Text>
       <Text>
         {'Releasable: '}
@@ -85,7 +88,11 @@ export function Header({ state, width, shown, root }: { state: State; width: num
             {` ${state.selected.size} selected${state.selected.size ? ` · ${formatBytes(selectedSize(state))}` : ''} `}
           </Text>
         </Box>
-        {state.scanning ? (
+        {state.install ? (
+          <Text dimColor wrap="truncate-end">
+            {' ↑↓ move │ →← open/close │ L log │ q quit │ actions enable when installing is done'}
+          </Text>
+        ) : state.scanning ? (
           <Text dimColor wrap="truncate-end">
             {' ↑↓ move │ →← open/close │ q quit │ actions enable when the scan is done'}
           </Text>

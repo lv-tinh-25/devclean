@@ -1,12 +1,24 @@
 import type { RestoredProject } from './history.js';
+import type { InstallResult } from './actions.js';
 import type { Project } from './scan.js';
 import { buildView } from './view.js';
 
 export interface Row extends Project {
-  status: 'idle' | 'deleting' | 'deleted' | 'error';
+  status: 'idle' | 'deleting' | 'deleted' | 'error' | 'installing';
   error?: string;
   deletedAt?: number;
+  warning?: string;
+  log?: string;
 }
+
+export interface InstallProgress {
+  total: number;
+  done: number;
+  current?: string;
+  tail: string[];
+}
+
+const TAIL_LINES = 4;
 
 export interface State {
   rows: Row[];
@@ -24,6 +36,7 @@ export interface State {
   allSelected: boolean;
   anchors: Set<string>;
   expanded: Set<string>;
+  install: InstallProgress | null;
 }
 
 export type Action =
@@ -44,7 +57,12 @@ export type Action =
   | { type: 'askQuit' }
   | { type: 'expand' }
   | { type: 'collapse' }
-  | { type: 'restored'; projects: RestoredProject[] };
+  | { type: 'restored'; projects: RestoredProject[] }
+  | { type: 'installQueued'; paths: string[] }
+  | { type: 'installStarted'; path: string }
+  | { type: 'installOutput'; line: string }
+  | { type: 'installFinished'; path: string; result: InstallResult; project?: Project }
+  | { type: 'installDone' };
 
 export const initialState: State = {
   rows: [],
@@ -61,6 +79,7 @@ export const initialState: State = {
   allSelected: false,
   anchors: new Set(),
   expanded: new Set(),
+  install: null,
 };
 
 const byModified = (a: Row, b: Row) => b.modified - a.modified;
@@ -201,6 +220,28 @@ export function reducer(s: State, a: Action): State {
       if (!added.length) return s;
       return keepCursor(s, { ...s, rows: [...s.rows, ...added].sort(byModified) });
     }
+    case 'installQueued':
+      return { ...s, install: { total: a.paths.length, done: 0, current: undefined, tail: [] } };
+    case 'installStarted': {
+      const next = patch(s, a.path, (r) => ({ ...r, status: 'installing', error: undefined, warning: undefined }));
+      return { ...next, install: s.install && { ...s.install, current: a.path, tail: [] } };
+    }
+    case 'installOutput':
+      return s.install ? { ...s, install: { ...s.install, tail: [...s.install.tail, a.line].slice(-TAIL_LINES) } } : s;
+    case 'installFinished': {
+      const base = a.project ? keepCursor(s, upsert({ ...s, rows: s.rows.filter((r) => r.path !== a.path) }, a.project, true)) : s;
+      const failed = a.result.status === 'failed';
+      const next = patch(base, a.path, (r) => ({
+        ...r,
+        status: failed ? 'error' : r.status === 'installing' ? 'idle' : r.status,
+        error: failed ? a.result.message : undefined,
+        warning: a.result.status === 'warning' ? a.result.message : undefined,
+        log: a.result.log,
+      }));
+      return { ...next, install: s.install && { ...s.install, done: s.install.done + 1, current: undefined, tail: [] } };
+    }
+    case 'installDone':
+      return { ...s, install: null };
     case 'clearSelection':
       return { ...s, selected: new Set(), rangeAnchor: null, allSelected: false };
     case 'error':

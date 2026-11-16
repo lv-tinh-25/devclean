@@ -3,6 +3,7 @@ import { render } from 'ink-testing-library';
 import { App } from '../src/ui/App.js';
 import { initialState, type State } from '../src/state.js';
 import { loadHistory, recordDeletion } from '../src/history.js';
+import { chmod } from 'node:fs/promises';
 import { join } from 'node:path';
 import { file, tmp } from './helpers.js';
 
@@ -26,6 +27,14 @@ const state: State = {
 };
 
 const tick = () => new Promise((r) => setTimeout(r, 20));
+
+async function until(check: () => boolean, ms = 5000) {
+  const end = Date.now() + ms;
+  while (!check()) {
+    if (Date.now() > end) return;
+    await new Promise((r) => setTimeout(r, 25));
+  }
+}
 
 describe('App', () => {
   it('renders header and rows, then asks to confirm delete', async () => {
@@ -230,6 +239,68 @@ describe('App', () => {
     await new Promise((r) => setTimeout(r, 200));
     expect(lastFrame()).toMatch(/old-app .*deleted/);
     expect(lastFrame()).toContain('deleted 2d ago · node_modules · press i to reinstall');
+    unmount();
+  });
+
+  it('reinstalls inside the UI with live output and no Enter to return', async () => {
+    const dir = await tmp();
+    await file(join(dir, 'app/package.json'), '{}');
+    await file(join(dir, 'app/pnpm-lock.yaml'));
+    const bin = await tmp();
+    await file(join(bin, 'pnpm'), '#!/bin/sh\necho "Progress: resolved 597"\nsleep 0.5\necho "Error: ERR_PNPM_IGNORED_BUILDS" >&2\necho "Ignored build scripts: sharp@0.34.5" >&2\nmkdir -p node_modules && head -c 9000 /dev/zero > node_modules/x\nexit 1\n');
+    await chmod(join(bin, 'pnpm'), 0o755);
+    const oldPath = process.env.PATH;
+    process.env.PATH = `${bin}:${oldPath}`;
+    const st: State = {
+      ...state,
+      rows: [{ ...state.rows[0], path: join(dir, 'app'), name: 'app', status: 'deleted', size: 0, junk: [{ name: 'node_modules', size: 0 }], types: ['node'] }],
+    };
+    const { lastFrame, stdin, unmount } = render(<App root={dir} initial={st} />);
+    await tick();
+    stdin.write('i');
+    await until(() => lastFrame()!.includes('Progress: resolved 597'));
+    expect(lastFrame()).toMatch(/app .*installing/);
+    expect(lastFrame()).toContain('Installing app (1/1)');
+    expect(lastFrame()).toContain('Progress: resolved 597');
+    await until(() => lastFrame()!.includes('⚠'));
+    const f = lastFrame()!;
+    expect(f).not.toContain('Installing app');
+    expect(f).toMatch(/app .*\d+ KB/);
+    expect(f).toContain('⚠ build scripts skipped (sharp), run `pnpm approve-builds` in this project');
+    expect(f).toContain('L log');
+    process.env.PATH = oldPath;
+    unmount();
+  });
+
+  it('shortens a long scanned folder path instead of wrapping the header', () => {
+    const root = '/Users/someone/' + 'very-long-folder-name/'.repeat(6) + 'project';
+    const { lastFrame, unmount } = render(<App root={root} initial={state} />);
+    const folderLine = lastFrame()!.split('\n').find((l) => l.includes('Folder:'))!;
+    expect(folderLine).toContain('…');
+    expect(folderLine).toMatch(/project$/);
+    expect(lastFrame()!.split('\n')[1]).toContain('Releasable:');
+    unmount();
+  });
+
+  it('reinstalling a project from an earlier run clears it from the history', async () => {
+    const root = await tmp();
+    await file(join(root, 'old-app/package.json'), '{}');
+    await file(join(root, 'old-app/src/index.js'));
+    await recordDeletion({ path: join(root, 'old-app'), junk: ['node_modules'], types: ['node'], deletedAt: Date.now() - 86400e3 });
+    const bin = await tmp();
+    await file(join(bin, 'npm'), '#!/bin/sh\nmkdir -p node_modules && head -c 9000 /dev/zero > node_modules/x\n');
+    await chmod(join(bin, 'npm'), 0o755);
+    const oldPath = process.env.PATH;
+    process.env.PATH = `${bin}:${oldPath}`;
+    const empty = async function* () {};
+    const { lastFrame, stdin, unmount } = render(<App root={root} initial={{ ...initialState }} scanner={empty} />);
+    await until(() => lastFrame()!.includes('press i to reinstall'));
+    stdin.write('i');
+    await until(() => /old-app .*\d+ KB/.test(lastFrame()!));
+    await until(() => false, 200);
+    expect(lastFrame()).toMatch(/old-app .*\d+ KB/);
+    expect((await loadHistory()).find((e) => e.path === join(root, 'old-app'))).toBeUndefined();
+    process.env.PATH = oldPath;
     unmount();
   });
 });

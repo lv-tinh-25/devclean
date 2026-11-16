@@ -1,11 +1,12 @@
-import { spawn } from 'node:child_process';
 import { Box, Text, useApp, useInput, useStdout, type Key } from 'ink';
 import { useEffect, useReducer, useRef, useState } from 'react';
 import { nextShown } from '../progress.js';
-import { deleteJunk } from '../actions.js';
-import { recordDeletion, restoreDeleted } from '../history.js';
+import { deleteJunk, reinstall } from '../actions.js';
+import { forget, recordDeletion, restoreDeleted } from '../history.js';
 import { formatBytes, relativeTime } from '../format.js';
-import { reinstallRows } from '../reinstallFlow.js';
+import { readdir } from 'node:fs/promises';
+import { measureProject } from '../scan.js';
+import { openInFileManager, runInTerminal } from '../terminal.js';
 import { relative } from 'node:path';
 import { scan } from '../scan.js';
 import { buildView } from '../view.js';
@@ -81,22 +82,54 @@ export function App({ root, initial, scanner = scan }: AppProps) {
     }
   };
 
+  const installAbort = useRef<AbortController | null>(null);
+  useEffect(() => () => installAbort.current?.abort(), []);
+
+  // Installs run in the background, one project at a time, while the list stays usable.
   const runReinstall = async () => {
     if (busy.current) return;
     const set = new Set(targets(ref.current));
     const rows = ref.current.rows.filter((r) => set.has(r.path) && r.status !== 'deleting');
     if (!rows.length) return;
     busy.current = true;
+    const ac = new AbortController();
+    installAbort.current = ac;
+    send({ type: 'clearSelection' });
+    send({ type: 'installQueued', paths: rows.map((r) => r.path) });
+    let pending: string[] = [];
+    const flush = setInterval(() => {
+      for (const line of pending) send({ type: 'installOutput', line });
+      pending = [];
+    }, 100);
     try {
-      let actions: Action[] = [];
-      await suspendTerminal(async () => {
-        actions = await reinstallRows(rows);
-      });
-      for (const a of actions) send(a);
-      send({ type: 'clearSelection' });
+      for (const row of rows) {
+        if (ac.signal.aborted) break;
+        send({ type: 'installStarted', path: row.path });
+        const result = await reinstall(
+          row,
+          row.junk.map((j) => j.name),
+          { signal: ac.signal, onOutput: (line) => pending.push(line) },
+        );
+        pending = [];
+        const entries = await readdir(row.path).catch(() => row.entries);
+        const project = (await measureProject(row.path, entries)) ?? undefined;
+        send({ type: 'installFinished', path: row.path, result, project });
+        if (project?.junk.length) void forget([row.path]);
+      }
     } finally {
+      clearInterval(flush);
+      send({ type: 'installDone' });
       busy.current = false;
+      installAbort.current = null;
     }
+  };
+
+  const openLog = async (path: string) => {
+    let opened = false;
+    await suspendTerminal(async () => {
+      opened = await runInTerminal(process.platform === 'win32' ? 'notepad' : 'less', [path]);
+    });
+    if (!opened) openInFileManager(path);
   };
 
   const send = (action: Action) => {
@@ -106,9 +139,11 @@ export function App({ root, initial, scanner = scan }: AppProps) {
 
   const handle = (input: string, key: Key) => {
     const s = ref.current;
-    if (busy.current) return;
     if (s.confirmQuit) {
-      if (input === 'y') exit();
+      if (input === 'y') {
+        installAbort.current?.abort();
+        exit();
+      }
       else if (input === 'n' || key.escape) send({ type: 'cancel' });
       return;
     }
@@ -123,8 +158,12 @@ export function App({ root, initial, scanner = scan }: AppProps) {
     else if (key.pageDown) send({ type: 'move', delta: 10 });
     else if (key.rightArrow || input === 'l') send({ type: 'expand' });
     else if (key.leftArrow || input === 'h') send({ type: 'collapse' });
-    else if (s.scanning) {
-      // Rows keep arriving and re-sorting mid-scan, so only browsing and quitting are allowed.
+    else if (input === 'L') {
+      const item = buildView(s)[s.cursor];
+      const log = item?.row?.log;
+      if (item?.kind === 'row' && log) void openLog(log);
+    } else if (s.scanning || busy.current) {
+      // Rows move around mid-scan and mid-install, so only browsing and quitting are allowed.
       if (input === 'q') send({ type: 'askQuit' });
     }
     else if (input === ' ') send({ type: 'toggle' });
@@ -134,7 +173,7 @@ export function App({ root, initial, scanner = scan }: AppProps) {
     else if (key.return) send({ type: 'askDelete' });
     else if (input === 'o') {
       const path = buildView(s)[s.cursor]?.path;
-      if (path) spawn('open', [path], { stdio: 'ignore', detached: true }).on('error', () => {}).unref();
+      if (path) openInFileManager(path);
     } else if (input === 'i') void runReinstall();
     else if (input === 'q') send({ type: 'askQuit' });
   };
@@ -181,16 +220,42 @@ export function App({ root, initial, scanner = scan }: AppProps) {
         : members.length > 1
           ? `${members.length} projects · ${folders_}`
           : folders_;
+  const one = current?.kind === 'row' ? current.row : undefined;
+  const install = state.install;
+  const installing = install?.current ? state.rows.find((r) => r.path === install.current) : undefined;
+  const installLines = install ? 1 + install.tail.length : 0;
 
   return (
     // Full terminal height: Ink then repaints from the top-left instead of from
     // wherever the cursor was when the alternate screen opened.
     <Box flexDirection="column" height={height} width={width}>
       <Header state={state} width={width} shown={shown} root={root} />
-      <List state={state} root={root} width={width} height={height - headerHeight(width) - 2 - confirmLines} />
+      <List
+        state={state}
+        root={root}
+        width={width}
+        height={height - headerHeight(width) - 2 - confirmLines - installLines - (one?.warning ? 1 : 0)}
+      />
       <Text dimColor wrap="truncate-end">
-        {breakdown ? `  ${breakdown}` : ' '}
+        {breakdown ? `  ${breakdown}${one?.log ? '  ·  L log' : ''}` : ' '}
       </Text>
+      {one?.warning && (
+        <Text color="yellow" wrap="truncate-end">
+          {`  ⚠ ${one.warning}`}
+        </Text>
+      )}
+      {install && (
+        <Box flexDirection="column">
+          <Text color="cyan">
+            {installing ? `  Installing ${installing.name} (${install.done + 1}/${install.total})…` : '  Installing…'}
+          </Text>
+          {install.tail.map((line, i) => (
+            <Text key={i} dimColor wrap="truncate-end">
+              {`    ${line}`}
+            </Text>
+          ))}
+        </Box>
+      )}
       {state.confirmQuit && (
         <Text bold color="yellow">
           {state.selected.size ? `Quit with ${state.selected.size} selected? (y/n)` : 'Quit devclean? (y/n)'}
