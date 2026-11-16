@@ -1,0 +1,84 @@
+import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { dirname, join, sep } from 'node:path';
+import type { ProjectType } from './rules.js';
+import { findProject, type Project } from './scan.js';
+
+// What devclean deleted, so a project can still be reinstalled after devclean exits.
+// It is only a convenience: every read/write failure is ignored.
+
+export interface HistoryEntry {
+  path: string;
+  junk: string[];
+  types: ProjectType[];
+  deletedAt: number;
+}
+
+export function historyFile(): string {
+  const base = process.env.XDG_CONFIG_HOME || join(homedir(), '.config');
+  return join(base, 'devclean', 'history.json');
+}
+
+export async function loadHistory(file = historyFile()): Promise<HistoryEntry[]> {
+  try {
+    const data = JSON.parse(await readFile(file, 'utf8'));
+    return Array.isArray(data) ? data.filter((e) => typeof e?.path === 'string' && Array.isArray(e.junk)) : [];
+  } catch {
+    return [];
+  }
+}
+
+async function save(entries: HistoryEntry[], file: string): Promise<void> {
+  try {
+    await mkdir(dirname(file), { recursive: true });
+    // Write-then-rename so an interrupted write never leaves a half-written file.
+    const tmp = `${file}.${process.pid}.tmp`;
+    await writeFile(tmp, JSON.stringify(entries, null, 2));
+    await rename(tmp, file);
+  } catch {
+    // History is best-effort.
+  }
+}
+
+export async function recordDeletion(entry: HistoryEntry, file = historyFile()): Promise<void> {
+  const rest = (await loadHistory(file)).filter((e) => e.path !== entry.path);
+  await save([...rest, entry], file);
+}
+
+export async function forget(paths: string[], file = historyFile()): Promise<void> {
+  if (!paths.length) return;
+  const drop = new Set(paths);
+  const entries = await loadHistory(file);
+  const kept = entries.filter((e) => !drop.has(e.path));
+  if (kept.length !== entries.length) await save(kept, file);
+}
+
+const isUnder = (path: string, root: string) => path === root || path.startsWith(root.endsWith(sep) ? root : root + sep);
+
+export interface RestoredProject extends Project {
+  deletedAt: number;
+}
+
+// Projects under `root` that devclean deleted and that still have nothing to clean.
+// Entries that were reinstalled or whose folder is gone are dropped from the history.
+export async function restoreDeleted(root: string, file = historyFile()): Promise<RestoredProject[]> {
+  const restored: RestoredProject[] = [];
+  const stale: string[] = [];
+  for (const e of await loadHistory(file)) {
+    if (!isUnder(e.path, root)) continue;
+    const entries = await readdir(e.path).catch(() => null);
+    const project = entries && (await findProject(e.path, entries));
+    if (!project || project.junk.length) {
+      stale.push(e.path);
+      continue;
+    }
+    restored.push({
+      ...project,
+      junk: e.junk.map((name) => ({ name, size: 0 })),
+      measuring: false,
+      deletedAt: e.deletedAt,
+    });
+  }
+  await forget(stale, file);
+  return restored;
+}

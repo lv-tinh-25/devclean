@@ -3,7 +3,8 @@ import { Box, Text, useApp, useInput, useStdout, type Key } from 'ink';
 import { useEffect, useReducer, useRef, useState } from 'react';
 import { nextShown } from '../progress.js';
 import { deleteJunk } from '../actions.js';
-import { formatBytes } from '../format.js';
+import { recordDeletion, restoreDeleted } from '../history.js';
+import { formatBytes, relativeTime } from '../format.js';
 import { reinstallRows } from '../reinstallFlow.js';
 import { relative } from 'node:path';
 import { scan } from '../scan.js';
@@ -59,6 +60,8 @@ export function App({ root, initial, scanner = scan }: AppProps) {
       // The throttle may have dropped the last report; the final count must be exact.
       send({ type: 'progress', ...latest });
       send({ type: 'scanDone', ms: performance.now() - started });
+      const restored = await restoreDeleted(root);
+      if (restored.length && !ac.signal.aborted) send({ type: 'restored', projects: restored });
     })();
     return () => ac.abort();
   }, []);
@@ -71,6 +74,7 @@ export function App({ root, initial, scanner = scan }: AppProps) {
       const row = ref.current.rows.find((r) => r.path === path)!;
       try {
         send({ type: 'deleted', path, freed: await deleteJunk(row) });
+        void recordDeletion({ path, junk: row.junk.map((j) => j.name), types: row.types, deletedAt: Date.now() });
       } catch (e) {
         send({ type: 'error', path, error: (e as Error).message });
       }
@@ -168,7 +172,15 @@ export function App({ root, initial, scanner = scan }: AppProps) {
   const folders_ = current?.measuring
     ? [...byFolder.keys()].join(' · ') + ' — measuring…'
     : [...byFolder].map(([name, size]) => `${name} ${formatBytes(size)}`).join(' · ');
-  const breakdown = !byFolder.size ? '' : members.length > 1 ? `${members.length} projects · ${folders_}` : folders_;
+  const single = members.length === 1 ? members[0] : undefined;
+  const breakdown =
+    single?.status === 'deleted'
+      ? `deleted ${single.deletedAt ? relativeTime(single.deletedAt) : 'just now'} · ${single.junk.map((j) => j.name).join(', ')} · press i to reinstall`
+      : !byFolder.size
+        ? ''
+        : members.length > 1
+          ? `${members.length} projects · ${folders_}`
+          : folders_;
 
   return (
     // Full terminal height: Ink then repaints from the top-left instead of from

@@ -1,5 +1,6 @@
 import { readdir } from 'node:fs/promises';
 import { reinstall } from './actions.js';
+import { forget } from './history.js';
 import { measureProject } from './scan.js';
 import type { Action, Row } from './state.js';
 
@@ -15,6 +16,7 @@ export async function reinstallRows(rows: Row[]): Promise<Action[]> {
     const entries = await readdir(row.path).catch(() => row.entries);
     const project = await measureProject(row.path, entries);
     if (project) actions.push({ type: 'remeasured', project });
+    if (project?.junk.length) await forget([row.path]);
     if (!res.ok) actions.push({ type: 'error', path: row.path, error: res.error! });
   }
   out('\nPress Enter to return to devclean…');

@@ -118,6 +118,7 @@ Never scanned: hidden folders below the scan root (`.git`, `.vscode`, `.npm`, `.
 
 - **Size** is the on-disk size of the cleanable folders. Hard-linked files are skipped because deleting them frees nothing. On macOS, pnpm and uv may use copy-on-write clones, which look like regular files, so their size can be overstated.
 - **Modified** is the newest file in the project (up to 4 levels deep), ignoring the cleanable folders and `.git`.
+- **History**: projects you delete are remembered in `~/.config/devclean/history.json` (or `$XDG_CONFIG_HOME/devclean/`), so after restarting devclean they still show up as `deleted` and can be reinstalled with <kbd>i</kbd>. An entry disappears once the project has its folders back. Delete the file to clear the history.
 - **Groups** form when a project sits inside another project's folder. The parent's own folders show up as `./ (root)` when the group is open.
 
 <a name="development"></a>

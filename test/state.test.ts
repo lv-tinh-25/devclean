@@ -76,6 +76,20 @@ describe('reducer', () => {
     expect([...s.selected].sort()).toEqual(['/r/mono', '/r/mono/a', '/r/mono/b', '/r/top']);
   });
 
+  it('adds restored deleted projects as deleted rows without duplicating', () => {
+    let s = run(found(proj('live', 9)));
+    s = run([{ type: 'restored', projects: [{ ...proj('gone', 5, 0), deletedAt: 123 }, { ...proj('live', 9), deletedAt: 1 }] }], s);
+    expect(s.rows.map((r) => [r.name, r.status, r.size, r.deletedAt])).toEqual([
+      ['live', 'idle', 100, undefined],
+      ['gone', 'deleted', 0, 123],
+    ]);
+  });
+
+  it('stamps deletedAt when a row is deleted in this session', () => {
+    const s = run([...found(proj('a', 2, 500)), { type: 'deleted', path: '/r/a', freed: 500 }]);
+    expect(s.rows[0].deletedAt).toBeGreaterThan(0);
+  });
+
   it('records anchor projects without adding rows', () => {
     const s = run(found({ ...proj('shop', 1, 0), junk: [], anchor: true }));
     expect(s.rows).toHaveLength(0);

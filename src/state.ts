@@ -1,9 +1,11 @@
+import type { RestoredProject } from './history.js';
 import type { Project } from './scan.js';
 import { buildView } from './view.js';
 
 export interface Row extends Project {
   status: 'idle' | 'deleting' | 'deleted' | 'error';
   error?: string;
+  deletedAt?: number;
 }
 
 export interface State {
@@ -41,7 +43,8 @@ export type Action =
   | { type: 'progress'; done: number; total: number }
   | { type: 'askQuit' }
   | { type: 'expand' }
-  | { type: 'collapse' };
+  | { type: 'collapse' }
+  | { type: 'restored'; projects: RestoredProject[] };
 
 export const initialState: State = {
   rows: [],
@@ -184,6 +187,7 @@ export function reducer(s: State, a: Action): State {
       const next = patch(s, a.path, (r) => ({
         ...r,
         status: 'deleted',
+        deletedAt: Date.now(),
         size: 0,
         junk: r.junk.map((j) => ({ ...j, size: 0 })),
       }));
@@ -191,6 +195,12 @@ export function reducer(s: State, a: Action): State {
     }
     case 'progress':
       return { ...s, progress: { done: a.done, total: a.total } };
+    case 'restored': {
+      const known = new Set(s.rows.map((r) => r.path));
+      const added: Row[] = a.projects.filter((p) => !known.has(p.path)).map((p) => ({ ...p, status: 'deleted', size: 0 }));
+      if (!added.length) return s;
+      return keepCursor(s, { ...s, rows: [...s.rows, ...added].sort(byModified) });
+    }
     case 'clearSelection':
       return { ...s, selected: new Set(), rangeAnchor: null, allSelected: false };
     case 'error':

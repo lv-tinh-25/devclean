@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { render } from 'ink-testing-library';
 import { App } from '../src/ui/App.js';
 import { initialState, type State } from '../src/state.js';
+import { loadHistory, recordDeletion } from '../src/history.js';
+import { join } from 'node:path';
+import { file, tmp } from './helpers.js';
 
 const row = (name: string, modified: number, size: number) => ({
   path: `/r/${name}`,
@@ -202,6 +205,31 @@ describe('App', () => {
     await tick();
     await tick();
     expect(lastFrame()).toContain('1,234 folders');
+    unmount();
+  });
+
+  it('remembers deletions in the history file', async () => {
+    const { stdin, unmount } = render(<App root="/r" initial={state} />);
+    await tick();
+    stdin.write('\r');
+    await tick();
+    stdin.write('y');
+    await new Promise((r) => setTimeout(r, 150));
+    const h = await loadHistory();
+    expect(h.find((e) => e.path === '/r/alpha-app')).toMatchObject({ junk: ['node_modules'], types: ['node'] });
+    unmount();
+  });
+
+  it('shows projects deleted in an earlier run so they can be reinstalled', async () => {
+    const root = await tmp();
+    await file(join(root, 'old-app/package.json'), '{}');
+    await file(join(root, 'old-app/src/index.js'));
+    await recordDeletion({ path: join(root, 'old-app'), junk: ['node_modules'], types: ['node'], deletedAt: Date.now() - 2 * 86400e3 });
+    const empty = async function* () {};
+    const { lastFrame, unmount } = render(<App root={root} initial={{ ...initialState }} scanner={empty} />);
+    await new Promise((r) => setTimeout(r, 200));
+    expect(lastFrame()).toMatch(/old-app .*deleted/);
+    expect(lastFrame()).toContain('deleted 2d ago · node_modules · press i to reinstall');
     unmount();
   });
 });
