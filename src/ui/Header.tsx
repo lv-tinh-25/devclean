@@ -14,11 +14,9 @@ export const LOGO_BIG = [
   ' \\__,_|\\___| \\_/ \\___|_|\\___|\\__,_|_| |_|',
 ];
 
-export const LOGO_SMALL = [
-  '┏┳┓┏━╸╻ ╻┏━╸╻  ┏━╸┏━┓┏┓╻',
-  ' ┃┃┣╸ ┃┏┛┃  ┃  ┣╸ ┣━┫┃┗┫',
-  '╺┻┛┗━╸┗┛ ┗━╸┗━╸┗━╸╹ ╹╹ ╹',
-];
+// For medium widths: ASCII art can't be scaled down without changing its look, so show
+// the name itself instead of a different-looking smaller drawing.
+export const WORDMARK = ['devclean', '────────', 'find & clean dependency', 'folders across projects'];
 
 const widthOf = (logo: string[]) => Math.max(...logo.map((l) => l.length));
 const GAP = 4;
@@ -29,7 +27,7 @@ const STATS_W = 46;
 // ASCII art can't scale, so pick the biggest logo that fits beside the stats without
 // squeezing either; below that, show the stats alone.
 function pickLogo(width: number): string[] {
-  for (const logo of [LOGO_BIG, LOGO_SMALL]) if (width >= widthOf(logo) + GAP + STATS_W) return logo;
+  for (const logo of [LOGO_BIG, WORDMARK]) if (width >= widthOf(logo) + GAP + STATS_W) return logo;
   return [];
 }
 
@@ -93,11 +91,22 @@ export function Header({ state, width, shown, root }: { state: State; width: num
       {logo.length ? (
         <Box gap={GAP}>
           <Box flexDirection="column" flexShrink={0} justifyContent="center" height={5}>
-            {logo.map((l, i) => (
-              <Text key={i} color="cyan">
-                {l}
-              </Text>
-            ))}
+            {logo === WORDMARK ? (
+              <>
+                <Text bold color="cyan">
+                  {WORDMARK[0]}
+                </Text>
+                <Text color="cyan">{WORDMARK[1]}</Text>
+                <Text dimColor>{WORDMARK[2]}</Text>
+                <Text dimColor>{WORDMARK[3]}</Text>
+              </>
+            ) : (
+              logo.map((l, i) => (
+                <Text key={i} color="cyan">
+                  {l}
+                </Text>
+              ))
+            )}
           </Box>
           {stats}
         </Box>

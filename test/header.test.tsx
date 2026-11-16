@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render } from 'ink-testing-library';
-import { Header, LOGO_BIG, LOGO_SMALL } from '../src/ui/Header.js';
+import { Header, LOGO_BIG, WORDMARK } from '../src/ui/Header.js';
 import { initialState, type State } from '../src/state.js';
 
 const state: State = { ...initialState, scanning: false, scanMs: 18070, progress: { done: 36652, total: 36652 } };
@@ -18,16 +18,16 @@ describe('Header logo', () => {
     expect(hasLogo(lines, LOGO_BIG)).toBe(true);
   });
 
-  it('switches to the small logo instead of squeezing the big one', () => {
+  it('switches to the wordmark instead of squeezing the big logo', () => {
     const lines = frame(83);
     expect(hasLogo(lines, LOGO_BIG)).toBe(false);
-    expect(hasLogo(lines, LOGO_SMALL)).toBe(true);
+    expect(hasLogo(lines, WORDMARK)).toBe(true);
     expect(lines[0]).toContain('Folder:');
   });
 
   it('drops the logo on narrow terminals', () => {
     const lines = frame(55);
-    expect(hasLogo(lines, LOGO_SMALL)).toBe(false);
+    expect(hasLogo(lines, WORDMARK)).toBe(false);
     expect(lines[0]).toMatch(/^Folder:/);
   });
 
@@ -46,8 +46,12 @@ describe('Header logo', () => {
       unmount();
       const done = frame(w);
       expect(hasLogo(scanning, LOGO_BIG), `width ${w}`).toBe(hasLogo(done, LOGO_BIG));
-      expect(hasLogo(scanning, LOGO_SMALL), `width ${w}`).toBe(hasLogo(done, LOGO_SMALL));
+      expect(hasLogo(scanning, WORDMARK), `width ${w}`).toBe(hasLogo(done, WORDMARK));
       expect(scanning.length, `width ${w}`).toBe(7);
     }
+  });
+
+  it('wordmark is the name, an underline and a two-line tagline', () => {
+    expect(WORDMARK).toEqual(['devclean', '────────', 'find & clean dependency', 'folders across projects']);
   });
 });
