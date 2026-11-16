@@ -2,6 +2,8 @@ import { lstat, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fsLimit } from './limit.js';
 
+const WINDOWS = process.platform === 'win32';
+
 async function list(dir: string) {
   try {
     return await fsLimit(() => readdir(dir, { withFileTypes: true }));
@@ -29,7 +31,9 @@ export async function dirSize(dir: string, work?: WorkCounter): Promise<number> 
       try {
         const st = await fsLimit(() => lstat(p));
         // nlink > 1: shared with another path (e.g. pnpm store), deleting frees nothing.
-        return st.nlink === 1 ? st.blocks * 512 : 0;
+        if (st.nlink !== 1) return 0;
+        // Windows reports no blocks; the logical size is the closest we get there.
+        return WINDOWS ? st.size : st.blocks * 512;
       } catch {
         return 0;
       }

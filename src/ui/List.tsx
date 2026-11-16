@@ -1,5 +1,6 @@
 import { Box, Text } from 'ink';
 import { relative } from 'node:path';
+import { lastSeparator } from '../paths.js';
 import { formatBytes, relativeTime, truncateMiddle } from '../format.js';
 import { labelOf } from '../rules.js';
 import type { State } from '../state.js';
@@ -39,13 +40,13 @@ interface Seg {
 
 // Split "parent/dir/name" so the parent part can be dimmed and the name stand out.
 function pathSegs(path: string, nameStyle: Omit<Seg, 'text'> = {}): Seg[] {
-  const cut = path.lastIndexOf('/') + 1;
+  const cut = lastSeparator(path) + 1;
   return [{ text: path.slice(0, cut), dim: true }, { text: path.slice(cut), ...nameStyle }];
 }
 
 function nameSegs(item: Item, root: string, view: Item[], idx: number, expanded: boolean): Seg[] {
   if (item.depth === 0) {
-    const rel = relative(root, item.path) || item.path.split('/').at(-1)!;
+    const rel = relative(root, item.path) || item.path.slice(lastSeparator(item.path) + 1);
     if (item.kind === 'row') return pathSegs(rel);
     const count = item.childCount + (item.row ? 1 : 0);
     return [

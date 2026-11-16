@@ -1,4 +1,5 @@
 import { homedir } from 'node:os';
+import { isInside } from '../paths.js';
 import { Box, Text } from 'ink';
 import { formatBytes, truncateMiddle } from '../format.js';
 import { renderBar } from '../progress.js';
@@ -42,7 +43,8 @@ export function Header({ state, width, shown, root }: { state: State; width: num
   const bar = renderBar(shown, BAR_W);
   const badge = ` ${state.selected.size} selected${state.selected.size ? ` · ${formatBytes(selectedSize(state))}` : ''} `;
   const mode = state.install ? 'installing' : state.scanning ? 'scanning' : state.rangeAnchor !== null ? 'range' : 'normal';
-  const shortRoot = root.startsWith(homedir()) ? '~' + root.slice(homedir().length) : root;
+  const home = homedir();
+  const shortRoot = root === home || isInside(root, home) ? '~' + root.slice(home.length) : root;
   const big = fitsLogo(width);
   const statsWidth = Math.max(10, big ? width - widthOf(LOGO_BIG) - GAP : width);
   const status = state.scanning ? (

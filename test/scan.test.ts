@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { symlink } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { join, relative } from 'node:path';
 import { scan, type Project } from '../src/scan.js';
-import { file, tmp } from './helpers.js';
+import { file, linkDir, tmp } from './helpers.js';
 
 async function collect(root: string, signal?: AbortSignal) {
   const out: Project[] = [];
@@ -51,7 +50,7 @@ describe('scan', () => {
     await file(join(root, 'fileproj/dist'), 'user data');
     await file(join(root, 'outside/big.bin'), Buffer.alloc(100_000, 1));
     await file(join(root, 'linkproj/package.json'), '{}');
-    await symlink(join(root, 'outside'), join(root, 'linkproj/node_modules'));
+    await linkDir(join(root, 'outside'), join(root, 'linkproj/node_modules'));
     expect(await collect(root)).toEqual([]);
   });
 
@@ -120,8 +119,8 @@ describe('scan', () => {
 
   it('does not follow symlink loops', async () => {
     const root = await fixture();
-    await symlink(root, join(root, 'loop'));
-    await symlink(join(root, 'a'), join(root, 'alias'));
+    await linkDir(root, join(root, 'loop'));
+    await linkDir(join(root, 'a'), join(root, 'alias'));
     const found = await collect(root);
     expect(found).toHaveLength(4);
   });

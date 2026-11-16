@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { detect, installCommands } from '../src/detect.js';
 
-const cmds = (...a: Parameters<typeof installCommands>) =>
-  installCommands(...a).map((c) => [c.cmd, ...c.args].join(' '));
+const cmds = (types: Parameters<typeof installCommands>[0], entries: string[], deleted: string[], windows = false) =>
+  installCommands(types, entries, deleted, windows).map((c) => [c.cmd, ...c.args].join(' '));
 
 describe('detect', () => {
   it('finds node project with junk', () => {
@@ -52,5 +52,14 @@ describe('installCommands', () => {
   });
   it('concatenates multi-type commands in order', () => {
     expect(cmds(['node', 'maven'], ['package.json', 'pom.xml'], [])).toEqual(['npm install', 'mvn -q dependency:resolve']);
+  });
+  it('uses Windows python, venv layout and wrapper scripts on Windows', () => {
+    expect(cmds(['python'], ['requirements.txt'], [], true)).toEqual([
+      'python -m venv .venv',
+      '.venv\\Scripts\\pip install -r requirements.txt',
+    ]);
+    expect(cmds(['maven'], ['pom.xml', 'mvnw', 'mvnw.cmd'], [], true)).toEqual(['.\\mvnw.cmd -q dependency:resolve']);
+    expect(cmds(['gradle'], ['build.gradle', 'gradlew', 'gradlew.bat'], [], true)).toEqual(['.\\gradlew.bat dependencies']);
+    expect(cmds(['node'], ['package.json'], [], true)).toEqual(['npm install']);
   });
 });

@@ -3,9 +3,8 @@ import { render } from 'ink-testing-library';
 import { App } from '../src/ui/App.js';
 import { initialState, type State } from '../src/state.js';
 import { flushHistory, loadHistory, recordDeletion } from '../src/history.js';
-import { chmod } from 'node:fs/promises';
-import { join } from 'node:path';
-import { file, tmp } from './helpers.js';
+import { delimiter, join } from 'node:path';
+import { fakeBin, file, tmp } from './helpers.js';
 
 const row = (name: string, modified: number, size: number) => ({
   path: `/r/${name}`,
@@ -247,11 +246,17 @@ describe('App', () => {
     const dir = await tmp();
     await file(join(dir, 'app/package.json'), '{}');
     await file(join(dir, 'app/pnpm-lock.yaml'));
-    const bin = await tmp();
-    await file(join(bin, 'pnpm'), '#!/bin/sh\necho "Progress: resolved 597"\nsleep 0.5\necho "Error: ERR_PNPM_IGNORED_BUILDS" >&2\necho "Ignored build scripts: sharp@0.34.5" >&2\nmkdir -p node_modules && head -c 9000 /dev/zero > node_modules/x\nexit 1\n');
-    await chmod(join(bin, 'pnpm'), 0o755);
+    const bin = await fakeBin({
+      pnpm: `console.log("Progress: resolved 597");
+setTimeout(() => {
+  console.error("Error: ERR_PNPM_IGNORED_BUILDS");
+  console.error("Ignored build scripts: sharp@0.34.5");
+  const fs = require("fs"); fs.mkdirSync("node_modules", { recursive: true }); fs.writeFileSync("node_modules/x", Buffer.alloc(9000));
+  process.exitCode = 1;
+}, 500);`,
+    });
     const oldPath = process.env.PATH;
-    process.env.PATH = `${bin}:${oldPath}`;
+    process.env.PATH = `${bin}${delimiter}${oldPath}`;
     const st: State = {
       ...state,
       rows: [{ ...state.rows[0], path: join(dir, 'app'), name: 'app', status: 'deleted', size: 0, junk: [{ name: 'node_modules', size: 0 }], types: ['node'] }],
@@ -289,11 +294,9 @@ describe('App', () => {
     await file(join(root, 'old-app/package.json'), '{}');
     await file(join(root, 'old-app/src/index.js'));
     await recordDeletion({ path: join(root, 'old-app'), junk: ['node_modules'], types: ['node'], deletedAt: Date.now() - 86400e3 });
-    const bin = await tmp();
-    await file(join(bin, 'npm'), '#!/bin/sh\nmkdir -p node_modules && head -c 9000 /dev/zero > node_modules/x\n');
-    await chmod(join(bin, 'npm'), 0o755);
+    const bin = await fakeBin({ npm: 'const fs = require("fs"); fs.mkdirSync("node_modules", { recursive: true }); fs.writeFileSync("node_modules/x", Buffer.alloc(9000));' });
     const oldPath = process.env.PATH;
-    process.env.PATH = `${bin}:${oldPath}`;
+    process.env.PATH = `${bin}${delimiter}${oldPath}`;
     const empty = async function* () {};
     const { lastFrame, stdin, unmount } = render(<App root={root} initial={{ ...initialState }} scanner={empty} />);
     await until(() => lastFrame()!.includes('press i to reinstall'));
@@ -312,11 +315,9 @@ describe('App', () => {
       await file(join(dir, `${n}/package.json`), '{}');
       await file(join(dir, `${n}/node_modules/x`), Buffer.alloc(5000, 1));
     }
-    const bin = await tmp();
-    await file(join(bin, 'npm'), '#!/bin/sh\nsleep 0.6\n');
-    await chmod(join(bin, 'npm'), 0o755);
+    const bin = await fakeBin({ npm: 'setTimeout(() => {}, 600)' });
     const oldPath = process.env.PATH;
-    process.env.PATH = `${bin}:${oldPath}`;
+    process.env.PATH = `${bin}${delimiter}${oldPath}`;
     const mk = (n: string, m: number) => ({ ...state.rows[0], path: join(dir, n), name: n, modified: m, types: ['node' as const] });
     const st: State = { ...state, rows: [mk('one', 3), mk('two', 2), mk('three', 1)] };
     const { lastFrame, stdin, unmount } = render(<App root={dir} initial={st} />);
@@ -347,11 +348,9 @@ describe('App', () => {
       await file(join(dir, `${n}/package.json`), '{}');
       await file(join(dir, `${n}/node_modules/x`), Buffer.alloc(5000, 1));
     }
-    const bin = await tmp();
-    await file(join(bin, 'npm'), '#!/bin/sh\nsleep 0.6\n');
-    await chmod(join(bin, 'npm'), 0o755);
+    const bin = await fakeBin({ npm: 'setTimeout(() => {}, 600)' });
     const oldPath = process.env.PATH;
-    process.env.PATH = `${bin}:${oldPath}`;
+    process.env.PATH = `${bin}${delimiter}${oldPath}`;
     const mk = (n: string, m: number) => ({ ...state.rows[0], path: join(dir, n), name: n.split('/').at(-1)!, modified: m, types: ['node' as const] });
     const st: State = { ...state, rows: [mk('mono', 3), mk('mono/packages/ui', 2), mk('mono/packages/api', 1)] };
     const { lastFrame, stdin, unmount } = render(<App root={dir} initial={st} />);
@@ -361,8 +360,8 @@ describe('App', () => {
     stdin.write('i');
     await until(() => lastFrame()!.includes('Installing'));
     expect(lastFrame()).toMatch(/▶ mono \(3\) .*installing/);
-    await until(() => lastFrame()!.includes('Installing mono/packages/'));
-    expect(lastFrame()).toMatch(/Installing mono\/packages\/(ui|api) \((2|3)\/3\)/);
+    await until(() => /Installing mono[\\/]packages[\\/]/.test(lastFrame()!));
+    expect(lastFrame()).toMatch(/Installing mono[\\/]packages[\\/](ui|api) \((2|3)\/3\)/);
     stdin.write('\u001B');
     process.env.PATH = oldPath;
     unmount();

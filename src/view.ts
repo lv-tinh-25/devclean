@@ -1,4 +1,4 @@
-import { sep } from 'node:path';
+import { isInside } from './paths.js';
 import type { ProjectType } from './rules.js';
 import type { Row, State } from './state.js';
 
@@ -15,8 +15,6 @@ export interface Item {
   modified: number;
   measuring: boolean;
 }
-
-const isInside = (child: string, parent: string) => child.startsWith(parent + sep);
 
 const rowItem = (r: Row, depth: 0 | 1): Item => ({
   kind: 'row',

@@ -1,13 +1,12 @@
 import { createWriteStream, type WriteStream } from 'node:fs';
 import { mkdir, readdir, rm } from 'node:fs/promises';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { cacheHome } from './paths.js';
 
 export const KEEP_LOGS = 20;
 
 export function logDir(): string {
-  const base = process.env.XDG_CACHE_HOME || join(homedir(), '.cache');
-  return join(base, 'devclean', 'logs');
+  return join(cacheHome(), 'devclean', 'logs');
 }
 
 const stamp = (d: Date) => {

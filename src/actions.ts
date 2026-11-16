@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawnTool } from './command.js';
 import { openLog, type InstallLog } from './installLog.js';
 import { readdir, rm } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
@@ -76,14 +76,12 @@ function run(c: InstallCmd, cwd: string, opts: RunOptions, log: InstallLog | nul
     log?.write(`$ ${c.label}\ncwd: ${cwd}\n\n`);
     let output = '';
     const lines = lineSplitter((l) => opts.onOutput?.(l));
-    const child = spawn(c.cmd, c.args, {
+    const child = spawnTool(c.cmd, c.args, {
       cwd,
       // No terminal to answer prompts: installers must not wait for input.
       env: { ...(opts.env ?? process.env), CI: '1' },
       stdio: ['ignore', 'pipe', 'pipe'],
       signal: opts.signal,
-      // Windows installers are .cmd shims that only run through a shell.
-      shell: process.platform === 'win32',
     });
     const onData = (d: Buffer) => {
       const text = d.toString();
@@ -91,8 +89,8 @@ function run(c: InstallCmd, cwd: string, opts: RunOptions, log: InstallLog | nul
       log?.write(text);
       lines.push(text);
     };
-    child.stdout.on('data', onData);
-    child.stderr.on('data', onData);
+    child.stdout!.on('data', onData);
+    child.stderr!.on('data', onData);
     let settled = false;
     const finish = (r: InstallResult) => {
       if (settled) return;
@@ -108,7 +106,9 @@ function run(c: InstallCmd, cwd: string, opts: RunOptions, log: InstallLog | nul
           err.code === 'ENOENT' ? `${c.cmd} not found` : err.name === 'AbortError' ? 'cancelled' : `${c.label}: ${err.message}`,
       }),
     );
-    child.on('close', (code) => finish(classify(c.label, code, output)));
+    child.on('close', (code) =>
+      finish(opts.signal?.aborted ? { status: 'failed', message: 'cancelled' } : classify(c.label, code, output)),
+    );
   });
 }
 
