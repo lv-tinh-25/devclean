@@ -1,6 +1,6 @@
 {
   "name": "@lv-tinh-25/devclean",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Find and clean dependency & build folders (node_modules, .venv, target…) across your projects from one terminal UI.",
   "type": "module",
   "bin": {
