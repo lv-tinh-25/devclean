@@ -3,9 +3,16 @@
 </p>
 
 <p align="center">
+  <a href="https://www.npmjs.com/package/@lv-tinh-25/devclean"><img src="https://img.shields.io/npm/v/@lv-tinh-25/devclean?logo=npm&color=cb3837" alt="npm version" /></a>
   <a href="https://github.com/lv-tinh-25/devclean/actions/workflows/ci.yml"><img src="https://github.com/lv-tinh-25/devclean/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <img src="https://img.shields.io/badge/node-%E2%89%A522-339933?logo=node.js&logoColor=white" alt="Node 22+" />
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license" />
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/macOS-supported-000000?logo=apple&logoColor=white" alt="macOS supported" />
+  <img src="https://img.shields.io/badge/Linux-supported-FCC624?logo=linux&logoColor=black" alt="Linux supported" />
+  <img src="https://img.shields.io/badge/Windows-supported-0078D6?logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPHBhdGggZmlsbD0iI2ZmZiIgZD0iTTAgMy40IDkuOCAydjkuNEgwek0xMSAxLjggMjQgMHYxMS4zSDExek0wIDEyLjZoOS44VjIyTDAgMjAuNnpNMTEgMTIuNmgxM1YyNGwtMTMtMS44eiIvPjwvc3ZnPg%3D%3D" alt="Windows supported" />
 </p>
 
 **Your disk is full of projects you finished months ago. devclean finds what they left behind.**
@@ -60,7 +67,13 @@ npx @lv-tinh-25/devclean     # run without installing
 npm i -g @lv-tinh-25/devclean  # or install globally, then just run `devclean`
 ```
 
-Requires Node.js 22 or newer. Works on **macOS**, **Linux** and **Windows**.
+Requires Node.js 22 or newer.
+
+| Platform | Verified on | Notes |
+| --- | --- | --- |
+| 🍎 **macOS** | macOS 15 | <kbd>o</kbd> opens Finder, <kbd>L</kbd> opens the log in `less` |
+| 🐧 **Linux** | Ubuntu (CI) | <kbd>o</kbd> uses `xdg-open` |
+| 🪟 **Windows** | Windows 11, Windows Terminal | <kbd>o</kbd> opens Explorer, <kbd>L</kbd> opens the log in Notepad. If PowerShell refuses to run `npm`/`devclean` scripts, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, or use `cmd` |
 
 <a name="usage"></a>
 
