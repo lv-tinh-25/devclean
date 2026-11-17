@@ -12,7 +12,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/macOS-supported-000000?logo=apple&logoColor=white" alt="macOS supported" />
   <img src="https://img.shields.io/badge/Linux-supported-FCC624?logo=linux&logoColor=black" alt="Linux supported" />
-  <img src="https://img.shields.io/badge/Windows-supported-0078D6?logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPHBhdGggZmlsbD0iI2ZmZiIgZD0iTTAgMy40IDkuOCAydjkuNEgwek0xMSAxLjggMjQgMHYxMS4zSDExek0wIDEyLjZoOS44VjIyTDAgMjAuNnpNMTEgMTIuNmgxM1YyNGwtMTMtMS44eiIvPjwvc3ZnPg%3D%3D" alt="Windows supported" />
+  <img src="https://img.shields.io/badge/Windows-supported-1f2328?logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4OCA4OCIgd2lkdGg9Ijg4IiBoZWlnaHQ9Ijg4Ij48cGF0aCBmaWxsPSIjMDA3OEQ0IiBkPSJNMCAwaDQydjQySDB6TTQ2IDBoNDJ2NDJINDZ6TTAgNDZoNDJ2NDJIMHpNNDYgNDZoNDJ2NDJINDZ6Ii8%2BPC9zdmc%2BCg%3D%3D" alt="Windows supported" />
 </p>
 
 **Your disk is full of projects you finished months ago. devclean finds what they left behind.**
@@ -73,7 +73,7 @@ Requires Node.js 22 or newer.
 | --- | --- | --- |
 | 🍎 **macOS** | macOS 15 | <kbd>o</kbd> opens Finder, <kbd>L</kbd> opens the log in `less` |
 | 🐧 **Linux** | Ubuntu (CI) | <kbd>o</kbd> uses `xdg-open` |
-| 🪟 **Windows** | Windows 11, Windows Terminal | <kbd>o</kbd> opens Explorer, <kbd>L</kbd> opens the log in Notepad. If PowerShell refuses to run `npm`/`devclean` scripts, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, or use `cmd` |
+| <img src="./.github/assets/windows.svg" width="14" alt="" /> **Windows** | Windows 11, Windows Terminal | <kbd>o</kbd> opens Explorer, <kbd>L</kbd> opens the log in Notepad. If PowerShell refuses to run `npm`/`devclean` scripts, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, or use `cmd` |
 
 <a name="usage"></a>
 
