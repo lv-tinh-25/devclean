@@ -1,6 +1,6 @@
 import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
-import { homedir } from 'node:os';
-import { dirname, join, sep } from 'node:path';
+import { dirname, join } from 'node:path';
+import { configHome, isInside } from './paths.js';
 import type { ProjectType } from './rules.js';
 import { findProject, type Project } from './scan.js';
 
@@ -15,8 +15,7 @@ export interface HistoryEntry {
 }
 
 export function historyFile(): string {
-  const base = process.env.XDG_CONFIG_HOME || join(homedir(), '.config');
-  return join(base, 'devclean', 'history.json');
+  return join(configHome(), 'devclean', 'history.json');
 }
 
 export async function loadHistory(file = historyFile()): Promise<HistoryEntry[]> {
@@ -69,7 +68,7 @@ export function forget(paths: string[], file = historyFile()): Promise<void> {
   });
 }
 
-const isUnder = (path: string, root: string) => path === root || path.startsWith(root.endsWith(sep) ? root : root + sep);
+const isUnder = (path: string, root: string) => path === root || isInside(path, root);
 
 export interface RestoredProject extends Project {
   deletedAt: number;

@@ -21,7 +21,15 @@ export interface Project {
 }
 
 // `bin` is Eclipse's output folder; it often holds a copied pom.xml and shows up as a fake project.
-const NEVER_ENTER = new Set(['Library', 'bin']);
+// The rest hold installed apps (VS Code extensions, Electron apps…) whose node_modules
+// look like projects but break the app when deleted.
+const NEVER_ENTER = new Set([
+  'Library',
+  'bin',
+  ...(process.platform === 'win32'
+    ? ['AppData', 'Program Files', 'Program Files (x86)', 'ProgramData', 'Windows', '$Recycle.Bin']
+    : []),
+]);
 
 // Generic names that some repos commit (libraries, GitHub Actions); only treat as junk when git ignores them.
 const NEEDS_GITIGNORE = new Set(['dist', 'build']);

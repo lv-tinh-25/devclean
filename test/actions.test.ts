@@ -3,9 +3,9 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { deleteJunk, reinstall } from '../src/actions.js';
 import { pruneLogs } from '../src/installLog.js';
-import { chmod, readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import type { Project } from '../src/scan.js';
-import { file, tmp } from './helpers.js';
+import { envWithBin, fakeBin, file, tmp } from './helpers.js';
 
 const project = (path: string, over: Partial<Project> = {}): Project => ({
   path,
@@ -52,12 +52,7 @@ describe('deleteJunk', () => {
   });
 });
 
-async function fakeTool(name: string, script: string) {
-  const bin = await tmp();
-  await file(join(bin, name), `#!/bin/sh\n${script}\n`);
-  await chmod(join(bin, name), 0o755);
-  return { PATH: `${bin}:${process.env.PATH}` };
-}
+const fakeTool = async (name: string, js: string) => envWithBin(await fakeBin({ [name]: js }));
 
 describe('reinstall', () => {
   it('reports a missing tool instead of throwing', async () => {
@@ -74,7 +69,7 @@ describe('reinstall', () => {
     const d = await tmp();
     await file(join(d, 'package.json'), '{}');
     await file(join(d, 'pnpm-lock.yaml'));
-    const env = await fakeTool('pnpm', 'echo "Progress: resolved 1"; printf "added 3\\r"; echo "done"; mkdir node_modules');
+    const env = await fakeTool('pnpm', 'console.log("Progress: resolved 1"); process.stdout.write("added 3\\r"); console.log("done"); require("fs").mkdirSync("node_modules")');
     const lines: string[] = [];
     const res = await reinstall(project(d, { name: 'shop' }), ['node_modules'], { env, onOutput: (l) => lines.push(l) });
     expect(res.status).toBe('ok');
@@ -91,7 +86,7 @@ describe('reinstall', () => {
     const d = await tmp();
     await file(join(d, 'package.json'), '{}');
     await file(join(d, 'pnpm-lock.yaml'));
-    const env = await fakeTool('pnpm', 'echo "Error: ERR_PNPM_IGNORED_BUILDS" >&2; echo "Ignored build scripts: sharp@0.34.5, @swc/core@1.15.43" >&2; exit 1');
+    const env = await fakeTool('pnpm', 'console.error("Error: ERR_PNPM_IGNORED_BUILDS"); console.error("Ignored build scripts: sharp@0.34.5, @swc/core@1.15.43"); process.exitCode = 1');
     const res = await reinstall(project(d), ['node_modules'], { env });
     expect(res.status).toBe('warning');
     expect(res.message).toBe('build scripts skipped (sharp, @swc/core), run `pnpm approve-builds` in this project');
@@ -100,7 +95,7 @@ describe('reinstall', () => {
   it('reports non-zero exit with the last output line', async () => {
     const d = await tmp();
     await file(join(d, 'package.json'), '{}');
-    const env = await fakeTool('npm', 'echo "npm error code E404" >&2; exit 1');
+    const env = await fakeTool('npm', 'console.error("npm error code E404"); process.exitCode = 1');
     const res = await reinstall(project(d, { entries: ['package.json'] }), [], { env });
     expect(res.status).toBe('failed');
     expect(res.message).toBe('npm install exited with code 1: npm error code E404');
@@ -109,7 +104,7 @@ describe('reinstall', () => {
   it('runs non-interactively', async () => {
     const d = await tmp();
     await file(join(d, 'package.json'), '{}');
-    const env = await fakeTool('npm', 'echo "CI=$CI"; read x || echo "no stdin"');
+    const env = await fakeTool('npm', 'console.log("CI=" + process.env.CI); let b; try { b = require("fs").readFileSync(0); } catch {} if (!b?.length) console.log("no stdin")');
     const lines: string[] = [];
     await reinstall(project(d), [], { env, onOutput: (l) => lines.push(l) });
     expect(lines).toEqual(['CI=1', 'no stdin']);
@@ -118,7 +113,7 @@ describe('reinstall', () => {
   it('can be cancelled', async () => {
     const d = await tmp();
     await file(join(d, 'package.json'), '{}');
-    const env = await fakeTool('npm', 'sleep 5');
+    const env = await fakeTool('npm', 'setTimeout(() => {}, 5000)');
     const ac = new AbortController();
     const started = Date.now();
     setTimeout(() => ac.abort(), 100);

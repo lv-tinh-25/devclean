@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { chmod, link, mkdir, symlink, utimes } from 'node:fs/promises';
+import { chmod, link, mkdir, utimes } from 'node:fs/promises';
 import { join } from 'node:path';
 import { dirSize, latestMtime } from '../src/measure.js';
-import { file, tmp } from './helpers.js';
+import { file, linkDir, tmp, tryLinkFile } from './helpers.js';
 
 describe('dirSize', () => {
   it('counts on-disk blocks', async () => {
@@ -28,8 +28,8 @@ describe('dirSize', () => {
     await file(join(root, 'big.bin'), Buffer.alloc(300_000, 1));
     const d = join(root, 'd');
     await mkdir(d);
-    await symlink(join(root, 'big.bin'), join(d, 'link'));
-    await symlink(root, join(d, 'loop'));
+    await linkDir(root, join(d, 'loop'));
+    await tryLinkFile(join(root, 'big.bin'), join(d, 'link'));
     expect(await dirSize(d)).toBeLessThan(50_000);
   });
 

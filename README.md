@@ -60,7 +60,7 @@ npx @lv-tinh-25/devclean     # run without installing
 npm i -g @lv-tinh-25/devclean  # or install globally, then just run `devclean`
 ```
 
-Requires Node.js 22 or newer. Works on **macOS** and **Linux**; **Windows** support is coming soon.
+Requires Node.js 22 or newer. Works on **macOS**, **Linux** and **Windows**.
 
 <a name="usage"></a>
 
@@ -116,16 +116,16 @@ A folder is a project when it contains a marker file. Only the listed folders si
 | iOS | `Podfile` | `Pods` | `pod install` |
 | PHP | `composer.json` | `vendor` | `composer install` |
 
-Never scanned: hidden folders below the scan root (`.git`, `.vscode`, `.npm`, `.cargo`…, whose contents often can't be rebuilt), Eclipse `bin` output folders, `Library`, and symlinks. A file or symlink that merely has a junk name like `dist` is left alone.
+Never scanned: hidden folders below the scan root (`.git`, `.vscode`, `.npm`, `.cargo`…, whose contents often can't be rebuilt), Eclipse `bin` output folders, `Library` (macOS), `AppData`, `Program Files`, `ProgramData`, `Windows` and the Recycle Bin (Windows), and symlinks or junctions. A file or symlink that merely has a junk name like `dist` is left alone.
 
 <a name="how-it-works"></a>
 
 ## ⚙️ How it works
 
-- **Size** is the on-disk size of the cleanable folders. Hard-linked files are skipped because deleting them frees nothing. On macOS, pnpm and uv may use copy-on-write clones, which look like regular files, so their size can be overstated.
-- **Reinstalling** runs inside the list: the row shows `installing` (other selected projects show `queued 2/3`, …), the last few output lines appear under the list, and you can keep browsing. <kbd>Esc</kbd> cancels the projects still waiting. Installers run non-interactively (`CI=1`). If pnpm skips dependency build scripts, the project is marked with a ⚠ and a hint to run `pnpm approve-builds` (devclean never approves them for you). Full logs are kept in `~/.cache/devclean/logs/` (the 20 most recent).
+- **Size** is the on-disk size of the cleanable folders. Hard-linked files are skipped because deleting them frees nothing. On macOS, pnpm and uv may use copy-on-write clones, which look like regular files, so their size can be overstated. On Windows, the size is the files' logical size.
+- **Reinstalling** runs inside the list: the row shows `installing` (other selected projects show `queued 2/3`, …), the last few output lines appear under the list, and you can keep browsing. <kbd>Esc</kbd> cancels the projects still waiting. Installers run non-interactively (`CI=1`). If pnpm skips dependency build scripts, the project is marked with a ⚠ and a hint to run `pnpm approve-builds` (devclean never approves them for you). Full logs are kept in `~/.cache/devclean/logs/` (Windows: `%LOCALAPPDATA%\devclean\logs\`), the 20 most recent.
 - **Modified** is the newest file in the project (up to 4 levels deep), ignoring the cleanable folders and `.git`.
-- **History**: projects you delete are remembered in `~/.config/devclean/history.json` (or `$XDG_CONFIG_HOME/devclean/`), so after restarting devclean they still show up as `deleted` and can be reinstalled with <kbd>i</kbd>. An entry disappears once the project has its folders back. Delete the file to clear the history.
+- **History**: projects you delete are remembered in `~/.config/devclean/history.json` (or `$XDG_CONFIG_HOME/devclean/`; Windows: `%APPDATA%\devclean\`), so after restarting devclean they still show up as `deleted` and can be reinstalled with <kbd>i</kbd>. An entry disappears once the project has its folders back. Delete the file to clear the history.
 - **Groups** form when a project sits inside another project's folder. The parent's own folders show up as `./ (root)` when the group is open.
 
 <a name="development"></a>
